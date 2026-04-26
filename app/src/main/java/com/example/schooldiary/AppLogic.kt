@@ -1,7 +1,5 @@
-@file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class, androidx.compose.material3.ExperimentalMaterial3Api::class)
-package com.bymrd1mm.schooldiary
+package com.example.schooldiary
 
-// Android & System
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -10,53 +8,14 @@ import android.media.AudioAttributes
 import android.media.MediaPlayer
 import android.media.MediaRecorder
 import android.net.Uri
-import android.os.Bundle
+import android.os.Build
 import android.provider.OpenableColumns
 import android.util.Base64
-
-// Activity & Lifecycle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-
-// Compose Animation
-import androidx.compose.animation.*
-import androidx.compose.animation.core.*
-
-// Compose Foundation & Layout
-import androidx.compose.foundation.*
-import androidx.compose.foundation.gestures.*
-import androidx.compose.foundation.layout.*
-// Compose UI & Runtime
-import androidx.compose.runtime.*
-import androidx.compose.ui.graphics.*
-import androidx.compose.ui.platform.*
-
-// Compose Material 3 & Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.*
-import androidx.compose.material3.*
-
-
-// AndroidX & Utils
+import androidx.compose.ui.graphics.Color
 import androidx.core.content.FileProvider
-import androidx.core.view.WindowCompat
 import androidx.exifinterface.media.ExifInterface
-import com.example.schooldiary.BellTime
-import com.example.schooldiary.BlackBg
-import com.example.schooldiary.FileType
-import com.example.schooldiary.Homework
-import com.example.schooldiary.Lesson
-import com.example.schooldiary.SpaceFile
-import com.example.schooldiary.Zinc900
-import com.example.schooldiary.defaultBellSchedule
-import com.example.schooldiary.defaultScheduleData
-import com.example.schooldiary.ui.navigation.AppContent
-
-// Third Party (Coil, Gson)
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-
-// Coroutines & Java/Kotlin Utils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -70,25 +29,8 @@ import java.util.Locale
 import java.util.Scanner
 import java.util.UUID
 import kotlin.math.absoluteValue
-import kotlin.math.roundToInt
 
-
-
-class MainActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        setTheme(R.style.Theme_SchoolDiary)
-        super.onCreate(savedInstanceState)
-        window.navigationBarColor = android.graphics.Color.BLACK
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-        setContent {
-            MaterialTheme(colorScheme = darkColorScheme(background = BlackBg, surface = Zinc900, onSurface = Color.White)) {
-                AppContent()
-            }
-        }
-    }
-}
-
-// --- МЕНЕДЖЕРИ (Ті самі, без змін) ---
+// --- МЕНЕДЖЕРИ ---
 
 class MySpaceManager(private val context: Context) {
     private val prefs = context.getSharedPreferences("school_diary_prefs", Context.MODE_PRIVATE)
@@ -660,5 +602,3 @@ object MediaStoreUtils {
         return Bitmap.createScaledBitmap(bitmap, newWidth, newHeight, true)
     }
 }
-
-

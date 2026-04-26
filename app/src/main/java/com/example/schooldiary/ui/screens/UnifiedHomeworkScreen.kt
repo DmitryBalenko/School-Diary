@@ -1,0 +1,729 @@
+package com.example.schooldiary.ui.screens
+
+import android.content.Context
+import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
+import android.widget.Toast
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.outlined.CalendarToday
+import androidx.compose.material.icons.outlined.FormatListBulleted
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Divider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
+import androidx.navigation.NavController
+import com.bymrd1mm.schooldiary.BellManager
+import com.bymrd1mm.schooldiary.GeminiClient
+import com.bymrd1mm.schooldiary.HomeworkManager
+import com.bymrd1mm.schooldiary.ScheduleManager
+import com.bymrd1mm.schooldiary.SettingsManager
+import com.bymrd1mm.schooldiary.SimpleAudioPlayer
+import com.example.schooldiary.BellTime
+import com.example.schooldiary.BlackBg
+import com.example.schooldiary.CardDark
+import com.example.schooldiary.Homework
+import com.example.schooldiary.Lesson
+import com.example.schooldiary.Tr
+import com.example.schooldiary.Zinc500
+import com.example.schooldiary.Zinc800
+import com.example.schooldiary.Zinc900
+import com.example.schooldiary.ui.components.AsyncImagePreview
+import com.example.schooldiary.ui.components.ImageViewer
+import com.example.schooldiary.ui.components.TelegramAudioPlayer
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import java.io.File
+import kotlin.math.absoluteValue
+import kotlin.math.roundToInt
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun UnifiedHomeworkScreen(
+    navController: NavController,
+    hwManager: HomeworkManager,
+    scheduleManager: ScheduleManager,
+    bellManager: BellManager,
+    settingsManager: SettingsManager,
+    lang: String
+) {
+    var viewMode by remember { mutableStateOf(ViewMode.WEEK) }
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val density = LocalDensity.current
+
+    // --- ВІБРАЦІЯ ---
+    val vibrator = remember {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+            vibratorManager.defaultVibrator
+        } else {
+            @Suppress("DEPRECATION")
+            context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+        }
+    }
+
+
+    // --- АНІМАЦІЯ СВАЙПУ ---
+    val offsetX = remember { Animatable(0f) }
+    val screenWidthPx = context.resources.displayMetrics.widthPixels.toFloat()
+    val triggerThreshold = -screenWidthPx * 0.22f
+
+    val hwList = remember { mutableStateListOf<Homework>() }
+    val currentSchedule = remember { scheduleManager.getSchedule() }
+    val bells = remember { bellManager.getBells() }
+
+    val isPastThreshold by remember { derivedStateOf { offsetX.value <= triggerThreshold } }
+    var hasVibrated by remember { mutableStateOf(false) }
+
+    LaunchedEffect(isPastThreshold) {
+        if (isPastThreshold && !hasVibrated) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                vibrator.vibrate(VibrationEffect.createOneShot(12, VibrationEffect.DEFAULT_AMPLITUDE))
+            } else {
+                @Suppress("DEPRECATION")
+                vibrator.vibrate(12)
+            }
+            hasVibrated = true
+        } else if (!isPastThreshold) {
+            hasVibrated = false
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        hwList.clear()
+        hwList.addAll(hwManager.getHomeworkListAsync())
+    }
+
+    Box(modifier = Modifier.fillMaxSize().background(BlackBg).statusBarsPadding()) {
+
+        // --- ШАР 0: ПІГУЛКА (БЕЗ ЗМІН) ---
+        if (offsetX.value < 0) {
+            val pullDistance = offsetX.value.absoluteValue
+            val arrowRotation by animateFloatAsState(if (isPastThreshold) 180f else 0f)
+            val circleScale by animateFloatAsState(if (isPastThreshold) 1.15f else 1.0f)
+
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .height(80.dp)
+                    .width(with(density) { pullDistance.toDp() })
+            ) {
+                Box(modifier = Modifier.fillMaxSize().background(color = Zinc800, shape = RoundedCornerShape(topStart = 100.dp, bottomStart = 100.dp)))
+                Box(
+                    modifier = Modifier.align(Alignment.CenterStart).padding(start = 12.dp).size(56.dp).scale(circleScale).shadow(6.dp, CircleShape, spotColor = Color.Black.copy(0.5f)).background(Color.White, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, tint = Color.Black, modifier = Modifier.size(28.dp).graphicsLayer { rotationZ = arrowRotation })
+                }
+            }
+        }
+
+        // --- ШАР 1: РУХОМИЙ КОНТЕНТ (З МОРФІНГОМ) ---
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .offset { IntOffset(offsetX.value.roundToInt(), 0) }
+                .background(BlackBg)
+                .draggable(
+                    state = rememberDraggableState { delta ->
+                        val newOffset = (offsetX.value + delta).coerceAtMost(0f)
+                        scope.launch { offsetX.snapTo(newOffset) }
+                    },
+                    orientation = Orientation.Horizontal,
+                    onDragStopped = {
+                        scope.launch {
+                            if (offsetX.value <= triggerThreshold) {
+                                offsetX.animateTo(-screenWidthPx, tween(300))
+                                navController.navigate("calendar")
+                                delay(100)
+                                offsetX.snapTo(0f)
+                            } else {
+                                offsetX.animateTo(0f, spring(dampingRatio = 0.6f, stiffness = Spring.StiffnessMedium))
+                            }
+                        }
+                    }
+                )
+        ) {
+            AnimatedContent(
+                targetState = viewMode,
+                transitionSpec = {
+                    (fadeIn(animationSpec = tween(350)) + scaleIn(initialScale = 0.85f, animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessLow)))
+                        .togetherWith(fadeOut(animationSpec = tween(200)) + scaleOut(targetScale = 1.1f, animationSpec = tween(200)))
+                },
+                label = "contentMorph",
+                modifier = Modifier.fillMaxSize()
+            ) { mode ->
+                if (mode == ViewMode.WEEK)
+                    WeekViewContent(hwList, currentSchedule, bells, settingsManager, lang, topPadding = 100.dp, bottomPadding = 40.dp)
+                else
+                    ListViewContent(hwList, settingsManager, lang, topPadding = 100.dp, bottomPadding = 40.dp)
+            }
+        }
+
+        // --- ШАР 2: ТІНЬ ТА ХЕДЕР (З МОРФІНГОМ ЗАГОЛОВКА) ---
+
+        // Верхній градієнт
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(120.dp) // Однакова висота
+                .align(Alignment.TopCenter)
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            BlackBg,                    // Повністю чорний
+                            BlackBg,                    // Чорний
+                            BlackBg.copy(alpha = 0.98f),   // Дуже густий
+                            BlackBg.copy(alpha = 0.89f),   // Поступовий початок згасання
+                            BlackBg.copy(alpha = 0.8f),    // М'який перехід
+                            BlackBg.copy(alpha = 0.65f),   // Середина
+                            BlackBg.copy(alpha = 0.45f),   // Стає легшим
+                            BlackBg.copy(alpha = 0.25f),   // Напівпрозорий
+                            BlackBg.copy(alpha = 0.15f),    // Ледь помітний серпанок
+                            Color.Transparent           // Вихід у нуль
+                        )
+                    )
+                )
+        )
+
+        // Хедер
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.TopCenter)
+                .padding(16.dp)
+                .zIndex(2f),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = { navController.popBackStack() }) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Color.White)
+            }
+
+            // МОРФІНГ ЗАГОЛОВКА
+            AnimatedContent(
+                targetState = viewMode,
+                transitionSpec = {
+                    (fadeIn(animationSpec = tween(300)) + scaleIn(initialScale = 0.9f))
+                        .togetherWith(fadeOut(animationSpec = tween(150)) + scaleOut(targetScale = 1.1f))
+                },
+                label = "titleMorph",
+                modifier = Modifier.weight(1f)
+            ) { mode ->
+                Text(
+                    text = if (mode == ViewMode.WEEK) Tr.get("week_schedule", lang) else Tr.get("task_list", lang),
+                    color = Color.White,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            // МОРФІНГ ІКОНКИ В КНОПЦІ
+            IconButton(
+                onClick = { viewMode = if (viewMode == ViewMode.WEEK) ViewMode.LIST else ViewMode.WEEK },
+                modifier = Modifier.background(Zinc800, CircleShape).size(40.dp)
+            ) {
+                AnimatedContent(
+                    targetState = viewMode,
+                    transitionSpec = {
+                        (fadeIn(animationSpec = tween(200)) + rotationIn())
+                            .togetherWith(fadeOut(animationSpec = tween(200)) + rotationOut())
+                    },
+                    label = "iconMorph"
+                ) { mode ->
+                    Icon(
+                        imageVector = if (mode == ViewMode.WEEK) Icons.Outlined.FormatListBulleted else Icons.Outlined.CalendarToday,
+                        contentDescription = null,
+                        tint = Color.White
+                    )
+                }
+            }
+        }
+    }
+}
+enum class ViewMode {
+    WEEK, LIST
+}
+@Composable
+fun WeekViewContent(
+    hwList: MutableList<Homework>,
+    currentSchedule: Map<String, List<Lesson>>,
+    bells: List<BellTime>,
+    settingsManager: SettingsManager,
+    lang: String,
+    topPadding: androidx.compose.ui.unit.Dp,
+    bottomPadding: androidx.compose.ui.unit.Dp
+) {
+    val daysKeys = listOf("MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY")
+
+    // Smart Focus Logic (вычисляется 1 раз при создании экрана)
+    val (targetIndex, todayIndex, isAfter16) = remember {
+        val now = java.time.LocalDateTime.now()
+        val currentDay = now.dayOfWeek.name
+        val currentHour = now.hour
+
+        val todayIdx = daysKeys.indexOf(currentDay) // Будет -1 для выходных
+
+        val targetIdx = when (currentDay) {
+            "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY" -> {
+                if (currentHour < 16) todayIdx else todayIdx + 1
+            }
+            "FRIDAY" -> {
+                if (currentHour < 16) todayIdx else 0 // Пт после 16:00 -> Пн
+            }
+            "SATURDAY", "SUNDAY" -> 0 // Выходные -> Пн
+            else -> 0
+        }
+        // Возвращаем целевой индекс, индекс текущего дня и флаг времени (после 16:00)
+        Triple(targetIdx, todayIdx, currentHour >= 16)
+    }
+
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = targetIndex)
+    val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val hwManager = remember { HomeworkManager(context.applicationContext) }
+
+    val hwMap by remember { derivedStateOf { hwList.filter { !it.isArchived }.groupBy { it.subject.trim() } } }
+
+    var viewingImage by remember { mutableStateOf<String?>(null) }
+    var playingAudioId by remember { mutableStateOf<Long?>(null) }
+    var transcribingId by remember { mutableStateOf<Long?>(null) }
+
+    LazyColumn(
+        state = listState,
+        contentPadding = PaddingValues(top = topPadding, start = 16.dp, end = 16.dp, bottom = bottomPadding),
+        verticalArrangement = Arrangement.spacedBy(24.dp)
+    ) {
+        itemsIndexed(items = daysKeys) { index, dayKey ->
+            DaySection(
+                dayName = Tr.get(dayKey, lang),
+                lessons = currentSchedule[dayKey] ?: emptyList(),
+                hwMap = hwMap,
+                dayKey = dayKey,
+                bells = bells,
+
+                // Плашка "СЕГОДНЯ" показывается только если это текущий день И время до 16:00
+                isToday = (index == todayIndex && !isAfter16),
+                isTomorrow = (index == targetIndex && index != todayIndex),
+
+                // Фокус (рамка и свечение) только на целевом дне
+                isFocused = (index == targetIndex),
+
+                deletedIds = emptyList(),
+                playingAudioId = playingAudioId,
+                transcribingId = transcribingId,
+                onPlayAudio = { id, path -> if (playingAudioId == id) { SimpleAudioPlayer.stop(); playingAudioId = null } else { playingAudioId = id; SimpleAudioPlayer.play(path) { playingAudioId = null } } },
+                onTranscribe = { id, path, currentText ->
+                    if(settingsManager.apiKey.isBlank()) { Toast.makeText(context, Tr.get("no_api_key", lang), Toast.LENGTH_LONG).show() }
+                    else {
+                        transcribingId = id
+                        coroutineScope.launch {
+                            val transcript = GeminiClient.transcribeAudio(File(path), settingsManager.apiKey)
+                            transcribingId = null
+                            if (!transcript.isNullOrBlank()) {
+                                val separator = if (currentText.isNotEmpty()) "\n" else ""
+                                val indexHw = hwList.indexOfFirst { it.id == id }
+                                if(indexHw != -1) {
+                                    val newHw = hwList[indexHw].copy(text = hwList[indexHw].text + separator + transcript)
+                                    hwList[indexHw] = newHw
+                                    hwManager.updateHomework(newHw)
+                                }
+                            }
+                        }
+                    }
+                },
+                onDeleteHw = { id ->
+                    coroutineScope.launch {
+                        if (playingAudioId == id) { SimpleAudioPlayer.stop(); playingAudioId = null }
+                        delay(300)
+                        hwManager.archiveHomework(id)
+                        val idx = hwList.indexOfFirst { it.id == id }
+                        if (idx != -1) hwList[idx] = hwList[idx].copy(isArchived = true)
+                    }
+                },
+                onViewImage = { path -> viewingImage = path },
+                lang = lang
+            )
+        }
+    }
+    if (viewingImage != null) { ImageViewer(viewingImage!!) { viewingImage = null } }
+}
+@Composable
+fun DaySection(
+    dayName: String,
+    lessons: List<Lesson>,
+    hwMap: Map<String, List<Homework>>,
+    dayKey: String,
+    bells: List<BellTime>,
+    isToday: Boolean,
+    isTomorrow: Boolean,
+    isFocused: Boolean,
+    deletedIds: List<Long>,
+    playingAudioId: Long?,
+    transcribingId: Long?,
+    onPlayAudio: (Long, String) -> Unit,
+    onTranscribe: (Long, String, String) -> Unit,
+    onDeleteHw: (Long) -> Unit,
+    onViewImage: (String) -> Unit,
+    lang: String
+) {
+    val clipboardManager = LocalClipboardManager.current
+    val context = LocalContext.current
+
+    fun findHomeworks(subject: String): List<Homework> {
+        val subjectHwList = hwMap[subject.trim()] ?: return emptyList()
+        return subjectHwList.filter { hw ->
+            Tr.data.values.any { langMap -> langMap[dayKey] == hw.targetDay }
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = if (isFocused) 12.dp else 0.dp, // Свечение только у дня с фокусом
+                shape = RoundedCornerShape(16.dp),
+                spotColor = Color.Black,
+                ambientColor = Color.Black
+            )
+            .border(if (isFocused) 1.dp else 0.dp, if (isFocused) Color.White else Color.Transparent, RoundedCornerShape(16.dp)) // Рамка только у дня с фокусом
+            .background(CardDark, RoundedCornerShape(16.dp))
+            .padding(16.dp)
+    ) {
+        Row(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(dayName, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
+
+                // Плашки для "СЕГОДНЯ" и "ЗАВТРА"
+                if (isToday) {
+                    Text(
+                        text = " ${Tr.get("today", lang)}",
+                        fontSize = 10.sp,
+                        color = Color.Black,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(start = 8.dp).background(Color.White, RoundedCornerShape(4.dp)).padding(horizontal = 4.dp, vertical = 2.dp)
+                    )
+                } else if (isTomorrow) {
+                    Text(
+                        text = " ${Tr.get("tomorrow", lang)}",
+                        fontSize = 10.sp,
+                        color = Color.Black,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(start = 8.dp).background(Color.White, RoundedCornerShape(4.dp)).padding(horizontal = 4.dp, vertical = 2.dp)
+                    )
+                }
+            }
+
+            IconButton(onClick = {
+                val sb = StringBuilder().append(dayName.uppercase()).append("\n")
+                lessons.forEach { l ->
+                    if(l.subject.isNotEmpty()) {
+                        sb.append("• ${l.subject}")
+                        val hws = findHomeworks(l.subject)
+                        if (hws.isNotEmpty()) {
+                            val combinedText = hws.mapNotNull { it.text.takeIf { t -> t.isNotBlank() } }.joinToString(", ")
+                            if (combinedText.isNotBlank()) {
+                                sb.append(" — $combinedText")
+                            }
+                        }
+                        sb.append("\n")
+                    }
+                }
+                clipboardManager.setText(AnnotatedString(sb.toString()))
+                Toast.makeText(context, Tr.get("copied", lang), Toast.LENGTH_SHORT).show()
+            }, modifier = Modifier.size(32.dp).background(Zinc900, RoundedCornerShape(8.dp))) {
+                Icon(Icons.Default.ContentCopy, "Copy", tint = Zinc500, modifier = Modifier.size(16.dp))
+            }
+        }
+
+        val maxIndex = if(lessons.isNotEmpty()) lessons.indexOfLast { it.subject.isNotEmpty() } else -1
+        if (maxIndex != -1) {
+            for (i in 0..maxIndex) {
+                val lesson = if(i < lessons.size) lessons[i] else Lesson("","","","","")
+                val timeStart = if (i < bells.size) bells[i].start else ""
+                val timeEnd = if (i < bells.size) bells[i].end else ""
+
+                if (lesson.subject.isNotEmpty()) {
+                    val homeworks = findHomeworks(lesson.subject)
+
+                    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Column(modifier = Modifier.width(40.dp)) { Text(timeStart, color = Color.White, fontSize = 13.sp); Text(timeEnd, color = Zinc500, fontSize = 11.sp) }
+                        Spacer(modifier = Modifier.width(8.dp)); Text(lesson.icon, fontSize = 20.sp); Spacer(modifier = Modifier.width(12.dp)); Column(modifier = Modifier.weight(1f)) { Text(lesson.subject, color = Color.White, fontSize = 16.sp) }; if (lesson.room.isNotEmpty()) Text(lesson.room, color = Zinc500, fontSize = 13.sp)
+                    }
+
+                    AnimatedVisibility(visible = homeworks.isNotEmpty(), exit = shrinkVertically() + fadeOut()) {
+                        Card(colors = CardDefaults.cardColors(containerColor = Zinc800), shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth().padding(start = 48.dp, bottom = 12.dp)) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+
+                                val allText = homeworks.mapNotNull { it.text.takeIf { t -> t.isNotBlank() } }.joinToString("\n\n")
+                                if (allText.isNotBlank()) {
+                                    Text(allText, color = Color.White.copy(0.9f), fontSize = 14.sp)
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                }
+
+                                homeworks.forEach { hw ->
+                                    val currentAudioPath = hw.audioPath
+                                    if (currentAudioPath != null) {
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        TelegramAudioPlayer(
+                                            isPlaying = playingAudioId == hw.id,
+                                            onPlayPause = { onPlayAudio(hw.id, currentAudioPath) },
+                                            onTranscribe = { onTranscribe(hw.id, currentAudioPath, hw.text) },
+                                            isTranscribing = transcribingId == hw.id,
+                                            lang = lang,
+                                            isSaved = true
+                                        )
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                    }
+                                }
+
+                                val allImages = homeworks.flatMap { it.imagePaths }
+                                if (allImages.isNotEmpty()) {
+                                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        items(allImages) { path ->
+                                            Box(modifier = Modifier.size(100.dp)) { AsyncImagePreview(path) { onViewImage(path) } }
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                }
+
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                                    Text(
+                                        text = Tr.get("done", lang),
+                                        color = Zinc500,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.clickable {
+                                            homeworks.forEach { onDeleteHw(it.id) }
+                                        }.padding(4.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp).alpha(0.5f), verticalAlignment = Alignment.CenterVertically) { Column(modifier = Modifier.width(40.dp)) { Text(timeStart, color = Zinc500, fontSize = 13.sp); Text(timeEnd, color = Zinc500, fontSize = 11.sp) }; Spacer(modifier = Modifier.width(8.dp)); Text("☕", fontSize = 20.sp); Spacer(modifier = Modifier.width(12.dp)); Text("--- " + Tr.get("window", lang) + " ---", color = Zinc500, fontSize = 14.sp, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic) }
+                }
+                if (i < maxIndex) Divider(color = Zinc800, thickness = 0.5.dp)
+            }
+        } else { Text(Tr.get("no_lessons", lang), color = Zinc500, fontSize = 14.sp, modifier = Modifier.padding(8.dp)) }
+    }
+}
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun ListViewContent(
+    hwList: MutableList<Homework>,
+    settingsManager: SettingsManager,
+    lang: String,
+    topPadding: androidx.compose.ui.unit.Dp,
+    bottomPadding: androidx.compose.ui.unit.Dp
+) {
+    val displayList by remember(hwList) {
+        derivedStateOf { hwList.filter { !it.isArchived } }
+    }
+
+    val context = LocalContext.current
+    val hwManager = remember { HomeworkManager(context.applicationContext) }
+    val coroutineScope = rememberCoroutineScope()
+
+    var viewingImage by remember { mutableStateOf<String?>(null) }
+    var playingAudioId by remember { mutableStateOf<Long?>(null) }
+    var transcribingId by remember { mutableStateOf<Long?>(null) }
+
+    if (displayList.isEmpty()) {
+        Box(modifier = Modifier.fillMaxSize(), Alignment.Center) {
+            Text(Tr.get("no_tasks", lang), color = Zinc500)
+        }
+    } else {
+        LazyColumn(
+            contentPadding = PaddingValues(top = topPadding, start = 16.dp, end = 16.dp, bottom = bottomPadding),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            items(
+                items = displayList,
+                key = { it.id }
+            ) { hw ->
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Zinc900),
+                    shape = RoundedCornerShape(20.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .animateItemPlacement()
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(hw.icon, fontSize = 24.sp)
+                            Spacer(Modifier.width(12.dp))
+                            Column {
+                                Text(hw.subject, fontWeight = FontWeight.Bold, color = Color.White, fontSize = 18.sp)
+                                Text("${Tr.get("recorded_on", lang)} ${hw.targetDay}", color = Zinc500, fontSize = 12.sp)
+                            }
+                        }
+
+                        if (hw.text.isNotEmpty()) {
+                            Spacer(Modifier.height(12.dp))
+                            Text(hw.text, color = Color.White)
+                        }
+
+                        // --- АУДИО ---
+                        hw.audioPath?.let { path ->
+                            Spacer(Modifier.height(8.dp))
+                            TelegramAudioPlayer(
+                                isPlaying = playingAudioId == hw.id,
+                                onPlayPause = {
+                                    if (playingAudioId == hw.id) {
+                                        SimpleAudioPlayer.stop()
+                                        playingAudioId = null
+                                    } else {
+                                        playingAudioId = hw.id
+                                        SimpleAudioPlayer.play(path) { playingAudioId = null }
+                                    }
+                                },
+                                onTranscribe = {
+                                    if(settingsManager.apiKey.isBlank()) {
+                                        Toast.makeText(context, Tr.get("no_api_key", lang), Toast.LENGTH_LONG).show()
+                                    } else {
+                                        transcribingId = hw.id
+                                        coroutineScope.launch {
+                                            val transcript = GeminiClient.transcribeAudio(File(path), settingsManager.apiKey)
+                                            transcribingId = null
+                                            if (!transcript.isNullOrBlank()) {
+                                                val separator = if (hw.text.isNotEmpty()) "\n" else ""
+                                                val indexHw = hwList.indexOfFirst { it.id == hw.id }
+                                                if(indexHw != -1) {
+                                                    val newHw = hwList[indexHw].copy(text = hwList[indexHw].text + separator + transcript)
+                                                    hwList[indexHw] = newHw
+                                                    hwManager.updateHomework(newHw)
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                isTranscribing = transcribingId == hw.id,
+                                lang = lang,
+                                isSaved = true
+                            )
+                        }
+
+                        // --- ИСПРАВЛЕНИЕ: ДОБАВЛЕН ВЫВОД ФОТО ---
+                        if (hw.imagePaths.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                items(hw.imagePaths) { path ->
+                                    Box(modifier = Modifier.size(80.dp).clip(RoundedCornerShape(12.dp))) {
+                                        AsyncImagePreview(path) { viewingImage = path }
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(Modifier.height(12.dp))
+
+                        Button(
+                            onClick = {
+                                coroutineScope.launch {
+                                    if (playingAudioId == hw.id) SimpleAudioPlayer.stop()
+                                    hwManager.archiveHomework(hw.id)
+                                    val idx = hwList.indexOfFirst { it.id == hw.id }
+                                    if(idx != -1) {
+                                        hwList[idx] = hwList[idx].copy(isArchived = true)
+                                    }
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color.Black),
+                            modifier = Modifier.fillMaxWidth().height(40.dp),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text(Tr.get("done", lang), fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+        }
+    }
+    if (viewingImage != null) ImageViewer(viewingImage!!) { viewingImage = null }
+}
+
+// Допоміжні анімації обертання для іконки
+fun rotationIn() = fadeIn(tween(200)) + scaleIn(initialScale = 0.5f)
+fun rotationOut() = fadeOut(tween(200)) + scaleOut(targetScale = 0.5f)
