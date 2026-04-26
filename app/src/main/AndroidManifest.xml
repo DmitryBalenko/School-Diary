@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Функції пристрою (допомагає Google Play фільтрувати пристрої) -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <!-- === ДОЗВОЛИ === -->
+
+    <!-- Для фото та відео -->
+    <uses-permission android:name="android.permission.CAMERA" />
+
+    <!-- Для запису голосових нотаток -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <!-- Для роботи Gemini AI -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- ВАЖЛИВО: Для тактильного відгуку (свайп дз) -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <!-- Дозволи на пам'ять (для старих версій Android та сумісності) -->
+    <!-- На нових Android (10+) ми використовуємо Scoped Storage, тому ці дозволи
+         обмежені maxSdkVersion, щоб не плутати систему -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+
+    <!-- ВАЖЛИВО: Дозволяє відкривати файли (PDF, Doc, MP3) у зовнішніх програмах на Android 11+ -->
+    <queries>
+        <!-- Для PDF -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:mimeType="application/pdf" />
+        </intent>
+        <!-- Для Word (doc/docx) -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:mimeType="application/msword" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:mimeType="application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
+        </intent>
+        <!-- Для зображень -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:mimeType="image/*" />
+        </intent>
+        <!-- Для аудіо -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:mimeType="audio/*" />
+        </intent>
+        <!-- Для відкриття ZIP (імпорт/експорт) -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:mimeType="application/zip" />
+        </intent>
+    </queries>
+
+    <application
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="School Diary"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.App.Starting"
+        tools:targetApi="31">
+
+        <!-- Налаштування FileProvider для обміну файлами (My Space та експорт) -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.provider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/provider_paths" />
+        </provider>
+
+        <activity
+            android:name=".MainActivity"
+            android:windowSoftInputMode="adjustResize"
+            android:exported="true"
+            android:theme="@style/Theme.App.Starting">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>
