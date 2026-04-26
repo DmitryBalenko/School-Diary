@@ -137,40 +137,103 @@ import kotlin.math.absoluteValue
 import kotlin.math.roundToInt
 
 @Composable
-fun AnimatedCard(onClick: () -> Unit, modifier: Modifier = Modifier, content: @Composable BoxScope.() -> Unit) {
+fun AnimatedCard(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    content: @Composable BoxScope.() -> Unit
+) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(targetValue = if (isPressed) 0.95f else 1f, label = "scale")
-    Card(modifier = modifier.scale(scale).clickable(interactionSource = interactionSource, indication = null, onClick = onClick), shape = RoundedCornerShape(28.dp), colors = CardDefaults.cardColors(containerColor = Zinc900)) { Box(modifier = Modifier.fillMaxSize().padding(24.dp), content = content) }
+    Card(
+        modifier = modifier
+            .scale(scale)
+            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick),
+        shape = RoundedCornerShape(28.dp),
+        colors = CardDefaults.cardColors(containerColor = Zinc900)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp), content = content
+        )
+    }
 }
+
 @Composable
 fun SimpleHeader(navController: NavController, title: String) {
-    Row(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = { navController.popBackStack() }) { Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White) }
-        Spacer(modifier = Modifier.width(8.dp)); Text(title, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconButton(onClick = { navController.popBackStack() }) {
+            Icon(
+                Icons.Default.ArrowBack,
+                contentDescription = "Back",
+                tint = Color.White
+            )
+        }
+        Spacer(modifier = Modifier.width(8.dp)); Text(
+        title,
+        color = Color.White,
+        fontSize = 20.sp,
+        fontWeight = FontWeight.Bold,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis
+    )
     }
 }
+
 @Composable
-fun TextAnimated(text: String, color: Color = Color.White, fontSize: androidx.compose.ui.unit.TextUnit = 16.sp, fontWeight: FontWeight? = null, modifier: Modifier = Modifier) {
-    AnimatedContent(targetState = text, transitionSpec = { (slideInVertically { height -> height } + fadeIn()).togetherWith(slideOutVertically { height -> -height } + fadeOut()) }, label = "textAnim") { targetText ->
-        Text(text = targetText, color = color, fontSize = fontSize, fontWeight = fontWeight, modifier = modifier)
+fun TextAnimated(
+    text: String,
+    color: Color = Color.White,
+    fontSize: androidx.compose.ui.unit.TextUnit = 16.sp,
+    fontWeight: FontWeight? = null,
+    modifier: Modifier = Modifier
+) {
+    AnimatedContent(
+        targetState = text,
+        transitionSpec = {
+            (slideInVertically { height -> height } + fadeIn()).togetherWith(slideOutVertically { height -> -height } + fadeOut())
+        },
+        label = "textAnim"
+    ) { targetText ->
+        Text(
+            text = targetText,
+            color = color,
+            fontSize = fontSize,
+            fontWeight = fontWeight,
+            modifier = modifier
+        )
     }
 }
+
 @Composable
 fun ExportCheckboxItem(label: String, checked: Boolean, onChecked: (Boolean) -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth().clickable { onChecked(!checked) }.padding(vertical = 12.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onChecked(!checked) }
+            .padding(vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Checkbox(
             checked = checked,
             onCheckedChange = onChecked,
-            colors = CheckboxDefaults.colors(checkedColor = Color.White, uncheckedColor = Zinc500, checkmarkColor = Color.Black)
+            colors = CheckboxDefaults.colors(
+                checkedColor = Color.White,
+                uncheckedColor = Zinc500,
+                checkmarkColor = Color.Black
+            )
         )
         Spacer(modifier = Modifier.width(12.dp))
         Text(label, fontSize = 16.sp, color = Color.White)
     }
 }
+
 @Composable
 fun TimeEditField(value: String, onValueChange: (String) -> Unit, label: String) {
     val digits = value.filter { it.isDigit() }
@@ -187,7 +250,9 @@ fun TimeEditField(value: String, onValueChange: (String) -> Unit, label: String)
                 val filtered = newRaw.filter { it.isDigit() }.take(4)
                 val formatted = if (filtered.length >= 3) {
                     filtered.substring(0, 2) + ":" + filtered.substring(2)
-                } else { filtered }
+                } else {
+                    filtered
+                }
                 onValueChange(formatted)
             },
             textStyle = TextStyle(
@@ -208,6 +273,7 @@ fun TimeEditField(value: String, onValueChange: (String) -> Unit, label: String)
         )
     }
 }
+
 // --- ОНОВЛЕНЕ ПОЛЕ ВВОДУ ЧАСУ (DESIGNER EDITION) ---
 @Composable
 fun TimeEditField(
@@ -219,13 +285,22 @@ fun TimeEditField(
     val digits = value.filter { it.isDigit() }
 
     Column(modifier = Modifier.fillMaxWidth()) {
-        Text(text = label, color = Zinc500, fontSize = 11.sp, modifier = Modifier.padding(start = 4.dp, bottom = 4.dp))
+        Text(
+            text = label,
+            color = Zinc500,
+            fontSize = 11.sp,
+            modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
+        )
 
         BasicTextField(
             value = digits,
             onValueChange = { newRaw ->
                 val filtered = newRaw.filter { it.isDigit() }.take(4)
-                val formatted = if (filtered.length >= 3) { filtered.substring(0, 2) + ":" + filtered.substring(2) } else { filtered }
+                val formatted = if (filtered.length >= 3) {
+                    filtered.substring(0, 2) + ":" + filtered.substring(2)
+                } else {
+                    filtered
+                }
                 onValueChange(formatted)
             },
             textStyle = TextStyle(
@@ -247,14 +322,27 @@ fun TimeEditField(
         )
     }
 }
+
 class TimeVisualTransformation : VisualTransformation {
     override fun filter(text: AnnotatedString): TransformedText {
-        val trim = text.text; val out = StringBuilder()
-        for (i in trim.indices) { out.append(trim[i]); if (i == 1) out.append(":") }
-        val offsetMapping = object : OffsetMapping { override fun originalToTransformed(offset: Int): Int { if (offset <= 1) return offset; if (offset <= 4) return offset + 1; return 5 }; override fun transformedToOriginal(offset: Int): Int { if (offset <= 2) return offset; if (offset <= 5) return offset - 1; return 4 } }
+        val trim = text.text
+        val out = StringBuilder()
+        for (i in trim.indices) {
+            out.append(trim[i]); if (i == 1) out.append(":")
+        }
+        val offsetMapping = object : OffsetMapping {
+            override fun originalToTransformed(offset: Int): Int {
+                if (offset <= 1) return offset; if (offset <= 4) return offset + 1; return 5
+            }
+
+            override fun transformedToOriginal(offset: Int): Int {
+                if (offset <= 2) return offset; if (offset <= 5) return offset - 1; return 4
+            }
+        }
         return TransformedText(AnnotatedString(out.toString()), offsetMapping)
     }
 }
+
 // --- ОКРЕМИЙ КОМПОНЕНТ КАРТКИ ДЗВІНКА ---
 @Composable
 fun BellCardItem(
@@ -267,7 +355,9 @@ fun BellCardItem(
     Card(
         colors = CardDefaults.cardColors(containerColor = Zinc900),
         shape = RoundedCornerShape(16.dp),
-        modifier = Modifier.fillMaxWidth().animateContentSize() // Плавна зміна розміру
+        modifier = Modifier
+            .fillMaxWidth()
+            .animateContentSize() // Плавна зміна розміру
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -292,7 +382,12 @@ fun BellCardItem(
                 )
             }
 
-            Text("—", color = Zinc500, modifier = Modifier.padding(horizontal = 8.dp), fontWeight = FontWeight.Light)
+            Text(
+                "—",
+                color = Zinc500,
+                modifier = Modifier.padding(horizontal = 8.dp),
+                fontWeight = FontWeight.Light
+            )
 
             // Поле кінця
             Box(modifier = Modifier.weight(1f)) {
@@ -306,6 +401,7 @@ fun BellCardItem(
         }
     }
 }
+
 @Composable
 fun SwipeToRevealCard(
     offsetAnim: Animatable<Float, AnimationVector1D>,
@@ -334,7 +430,9 @@ fun SwipeToRevealCard(
 
     // Цвет меняется с серого на красный
     val backgroundColor by animateColorAsState(
-        targetValue = if (isPastThreshold || isDeleteConfirmed) Color(0xFFEF4444) else Color(0xFF3F3F46),
+        targetValue = if (isPastThreshold || isDeleteConfirmed) Color(0xFFEF4444) else Color(
+            0xFF3F3F46
+        ),
         animationSpec = tween(durationMillis = 200),
         label = "bgColor"
     )
@@ -355,12 +453,14 @@ fun SwipeToRevealCard(
                 // --- ВОТ ЗДЕСЬ НАСТРАИВАЕМ ЗАКРУГЛЕНИЯ ---
                 // Слева (внутренняя часть) - маленькое скругление (4.dp)
                 // Справа (внешняя часть) - большое скругление как у плитки (24.dp)
-                .clip(RoundedCornerShape(
-                    topStart = 8.dp,
-                    bottomStart = 8.dp,
-                    topEnd = 24.dp,
-                    bottomEnd = 24.dp
-                ))
+                .clip(
+                    RoundedCornerShape(
+                        topStart = 8.dp,
+                        bottomStart = 8.dp,
+                        topEnd = 24.dp,
+                        bottomEnd = 24.dp
+                    )
+                )
                 .background(color = backgroundColor)
                 .clickable { if (isDeleteConfirmed) onDeleteClick() },
             contentAlignment = Alignment.Center
@@ -395,7 +495,10 @@ fun SwipeToRevealCard(
                         if (offsetAnim.value <= -triggerThresholdPx) {
                             // Фиксируем удаление
                             isDeleteConfirmed = true
-                            offsetAnim.animateTo(-anchorWidthPx, tween(300, easing = FastOutSlowInEasing))
+                            offsetAnim.animateTo(
+                                -anchorWidthPx,
+                                tween(300, easing = FastOutSlowInEasing)
+                            )
                         } else {
                             // Если не дотянули - прячем обратно
                             isDeleteConfirmed = false
@@ -408,17 +511,70 @@ fun SwipeToRevealCard(
         }
     }
 }
+
 @Composable
 fun SubjectSpaceCard(subject: String, icon: String, onClick: () -> Unit) {
     val themeColor = remember(subject, icon) { getSubjectThemeColor(subject, icon) }
-    Card(modifier = Modifier.fillMaxWidth().height(100.dp).clickable(onClick = onClick), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color.Transparent)) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(100.dp)
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+    ) {
         Box(modifier = Modifier.fillMaxSize()) {
-            Box(modifier = Modifier.fillMaxSize().background(Brush.horizontalGradient(colors = listOf(themeColor, Color.Black), startX = 0f, endX = Float.POSITIVE_INFINITY)))
-            Canvas(modifier = Modifier.fillMaxSize().alpha(0.03f)) { drawCircle(color = Color.White, radius = size.height * 1.2f, center = Offset(size.width * 0.9f, size.height * 0.5f)); drawLine(color = Color.White, start = Offset(0f, size.height), end = Offset(size.width * 0.3f, 0f), strokeWidth = 50f) }
-            Row(modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp), verticalAlignment = Alignment.CenterVertically) { Text(text = subject, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis); Spacer(modifier = Modifier.weight(1f)); Icon(Icons.Default.KeyboardArrowRight, null, tint = Zinc500, modifier = Modifier.size(24.dp)) }
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.horizontalGradient(
+                            colors = listOf(themeColor, Color.Black),
+                            startX = 0f,
+                            endX = Float.POSITIVE_INFINITY
+                        )
+                    )
+            )
+            Canvas(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .alpha(0.03f)
+            ) {
+                drawCircle(
+                    color = Color.White,
+                    radius = size.height * 1.2f,
+                    center = Offset(size.width * 0.9f, size.height * 0.5f)
+                ); drawLine(
+                color = Color.White,
+                start = Offset(0f, size.height),
+                end = Offset(size.width * 0.3f, 0f),
+                strokeWidth = 50f
+            )
+            }
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 24.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = subject,
+                    color = Color.White,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                ); Spacer(modifier = Modifier.weight(1f)); Icon(
+                Icons.Default.KeyboardArrowRight,
+                null,
+                tint = Zinc500,
+                modifier = Modifier.size(24.dp)
+            )
+            }
         }
     }
 }
+
 @Composable
 fun TelegramAudioPlayer(
     isPlaying: Boolean,
@@ -512,16 +668,26 @@ fun TelegramAudioPlayer(
             contentAlignment = Alignment.Center
         ) {
             if (isTranscribing) {
-                CircularProgressIndicator(modifier = Modifier.size(18.dp), color = Color.White, strokeWidth = 2.dp)
+                CircularProgressIndicator(
+                    modifier = Modifier.size(18.dp),
+                    color = Color.White,
+                    strokeWidth = 2.dp
+                )
             } else {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.ArrowForward, null, tint = Color.White.copy(0.4f), modifier = Modifier.size(10.dp))
+                    Icon(
+                        Icons.Default.ArrowForward,
+                        null,
+                        tint = Color.White.copy(0.4f),
+                        modifier = Modifier.size(10.dp)
+                    )
                     Text("A", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
     }
 }
+
 @SuppressLint("UnusedBoxWithConstraintsScope")
 @Composable
 fun ImageViewer(
@@ -624,56 +790,193 @@ fun ImageViewer(
                     .padding(top = 16.dp, end = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                IconButton(onClick = shareImage, modifier = Modifier.background(buttonBackground, CircleShape)) {
+                IconButton(
+                    onClick = shareImage,
+                    modifier = Modifier.background(buttonBackground, CircleShape)
+                ) {
                     Icon(Icons.Default.Share, "Share", tint = Color.White)
                 }
-                IconButton(onClick = onDismiss, modifier = Modifier.background(buttonBackground, CircleShape)) {
+                IconButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.background(buttonBackground, CircleShape)
+                ) {
                     Icon(Icons.Default.Close, "Close", tint = Color.White)
                 }
             }
         }
     }
 }
+
 @Composable
-fun AsyncImagePreview(imagePath: String, onClick: () -> Unit = {}) { val context = LocalContext.current; AsyncImage(model = ImageRequest.Builder(context).data(File(imagePath)).crossfade(true).build(), contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)).clickable { onClick() }) }
+fun AsyncImagePreview(imagePath: String, onClick: () -> Unit = {}) {
+    val context = LocalContext.current; AsyncImage(
+        model = ImageRequest.Builder(context).data(File(imagePath)).crossfade(true).build(),
+        contentDescription = null,
+        contentScale = ContentScale.Crop,
+        modifier = Modifier
+            .fillMaxSize()
+            .clip(RoundedCornerShape(8.dp))
+            .clickable { onClick() })
+}
 
 enum class ViewMode {
     WEEK, LIST
 }
+
 @Composable
 fun RecordingVisualizer(isRecording: Boolean) {
-    Row(modifier = Modifier.height(40.dp).fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-        if (!isRecording) { Box(Modifier.height(2.dp).width(100.dp).background(Zinc500, CircleShape)) }
-        else { val infiniteTransition = rememberInfiniteTransition(label = "wave"); repeat(10) { index -> val height by infiniteTransition.animateFloat(initialValue = 4f, targetValue = if (index % 2 == 0) 30f else 15f, animationSpec = infiniteRepeatable(animation = tween(300 + (index * 50), easing = FastOutSlowInEasing), repeatMode = RepeatMode.Reverse), label = "bar$index"); Box(modifier = Modifier.padding(horizontal = 2.dp).width(4.dp).height(height.dp).background(RedDelete, CircleShape)) } }
+    Row(
+        modifier = Modifier
+            .height(40.dp)
+            .fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (!isRecording) {
+            Box(
+                Modifier
+                    .height(2.dp)
+                    .width(100.dp)
+                    .background(Zinc500, CircleShape)
+            )
+        } else {
+            val infiniteTransition =
+                rememberInfiniteTransition(label = "wave"); repeat(10) { index ->
+                val height by infiniteTransition.animateFloat(
+                    initialValue = 4f,
+                    targetValue = if (index % 2 == 0) 30f else 15f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(
+                            300 + (index * 50),
+                            easing = FastOutSlowInEasing
+                        ), repeatMode = RepeatMode.Reverse
+                    ),
+                    label = "bar$index"
+                ); Box(
+                modifier = Modifier
+                    .padding(horizontal = 2.dp)
+                    .width(4.dp)
+                    .height(height.dp)
+                    .background(RedDelete, CircleShape)
+            )
+            }
+        }
     }
 }
 
 @Composable
 fun PlaybackVisualizer() {
-    Row(verticalAlignment = Alignment.CenterVertically) { val infiniteTransition = rememberInfiniteTransition(label = "play"); repeat(5) { index -> val height by infiniteTransition.animateFloat(initialValue = 4f, targetValue = 16f, animationSpec = infiniteRepeatable(animation = tween(300 + (index * 70), easing = FastOutSlowInEasing), repeatMode = RepeatMode.Reverse), label = "playBar$index"); Box(modifier = Modifier.padding(horizontal = 1.dp).width(3.dp).height(height.dp).background(Color.White, CircleShape)) } }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        val infiniteTransition = rememberInfiniteTransition(label = "play"); repeat(5) { index ->
+        val height by infiniteTransition.animateFloat(
+            initialValue = 4f,
+            targetValue = 16f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(
+                    300 + (index * 70),
+                    easing = FastOutSlowInEasing
+                ), repeatMode = RepeatMode.Reverse
+            ),
+            label = "playBar$index"
+        ); Box(
+        modifier = Modifier
+            .padding(horizontal = 1.dp)
+            .width(3.dp)
+            .height(height.dp)
+            .background(Color.White, CircleShape)
+    )
+    }
+    }
 }
 
-fun formatSeconds(seconds: Long): String { val m = seconds / 60; val s = seconds % 60; return String.format("%02d:%02d", m, s) }
+fun formatSeconds(seconds: Long): String {
+    val m = seconds / 60
+    val s = seconds % 60; return String.format("%02d:%02d", m, s)
+}
 
 @Composable
 fun EmojiPickerDialog(onDismiss: () -> Unit, onEmojiSelected: (String) -> Unit, lang: String) {
     Dialog(onDismissRequest = onDismiss) {
-        Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Zinc900), modifier = Modifier.fillMaxWidth().height(400.dp)) {
+        Card(
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = Zinc900),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(400.dp)
+        ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text(Tr.get("choose_icon", lang), color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 16.dp))
-                LazyVerticalGrid(columns = GridCells.Fixed(4), verticalArrangement = Arrangement.spacedBy(16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) { items(availableEmojis) { emoji -> Box(modifier = Modifier.aspectRatio(1f).clip(RoundedCornerShape(8.dp)).background(Zinc800).clickable { onEmojiSelected(emoji) }, contentAlignment = Alignment.Center) { Text(emoji, fontSize = 32.sp) } } }
+                Text(
+                    Tr.get("choose_icon", lang),
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(4),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    items(availableEmojis) { emoji ->
+                        Box(
+                            modifier = Modifier
+                                .aspectRatio(1f)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Zinc800)
+                                .clickable { onEmojiSelected(emoji) },
+                            contentAlignment = Alignment.Center
+                        ) { Text(emoji, fontSize = 32.sp) }
+                    }
+                }
             }
         }
     }
 }
+
 @Composable
-fun AddSubjectDialog(scheduleManager: ScheduleManager, onDismiss: () -> Unit, onSubjectSelected: (String) -> Unit, lang: String) {
-    val uniqueSubjects = remember { scheduleManager.getUniqueSubjects(scheduleManager.getSchedule()) }
+fun AddSubjectDialog(
+    scheduleManager: ScheduleManager,
+    onDismiss: () -> Unit,
+    onSubjectSelected: (String) -> Unit,
+    lang: String
+) {
+    val uniqueSubjects =
+        remember { scheduleManager.getUniqueSubjects(scheduleManager.getSchedule()) }
     Dialog(onDismissRequest = onDismiss) {
-        Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Zinc900), modifier = Modifier.fillMaxWidth().heightIn(max = 500.dp)) {
+        Card(
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = Zinc900),
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(max = 500.dp)
+        ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text(Tr.get("choose_subject", lang), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp); Spacer(modifier = Modifier.height(16.dp))
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) { items(uniqueSubjects) { lesson -> Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).clickable { onSubjectSelected(lesson.subject) }.padding(12.dp), verticalAlignment = Alignment.CenterVertically) { Text(lesson.icon, fontSize = 20.sp); Spacer(modifier = Modifier.width(12.dp)); Text(lesson.subject, color = Color.White, fontSize = 16.sp) }; Divider(color = Zinc800) } }
+                Text(
+                    Tr.get("choose_subject", lang),
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp
+                ); Spacer(modifier = Modifier.height(16.dp))
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(uniqueSubjects) { lesson ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { onSubjectSelected(lesson.subject) }
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                lesson.icon,
+                                fontSize = 20.sp
+                            ); Spacer(modifier = Modifier.width(12.dp)); Text(
+                            lesson.subject,
+                            color = Color.White,
+                            fontSize = 16.sp
+                        )
+                        }; Divider(color = Zinc800)
+                    }
+                }
             }
         }
     }

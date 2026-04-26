@@ -71,9 +71,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
@@ -118,7 +118,8 @@ fun MySpaceScreen(
 ) {
     // --- ДАННЫЕ И СОСТОЯНИЕ ---
     // Основной список предметов
-    val subjects = remember { mutableStateListOf<String>().apply { addAll(mySpaceManager.getActiveSubjects()) } }
+    val subjects =
+        remember { mutableStateListOf<String>().apply { addAll(mySpaceManager.getActiveSubjects()) } }
 
     // Список ID предметов, которые сейчас анимируются на удаление (чтобы сделать красивое "схлопывание")
     val itemsPendingRemoval = remember { mutableStateListOf<String>() }
@@ -160,7 +161,12 @@ fun MySpaceScreen(
             LazyColumn(
                 state = state.listState,
                 // Отступы сверху под Header (110dp) и снизу (100dp)
-                contentPadding = PaddingValues(top = 110.dp, bottom = 100.dp, start = 16.dp, end = 16.dp),
+                contentPadding = PaddingValues(
+                    top = 110.dp,
+                    bottom = 100.dp,
+                    start = 16.dp,
+                    end = 16.dp
+                ),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 modifier = Modifier
                     .fillMaxSize()
@@ -173,7 +179,9 @@ fun MySpaceScreen(
                         // --- ЛОГИКА АНИМИРОВАННОГО УДАЛЕНИЯ ---
                         // Если предмет попал в список "на удаление", переключаем флаг видимости
                         val isBeingRemoved = itemsPendingRemoval.contains(subject)
-                        val visibilityState = remember { MutableTransitionState(true) }.apply { targetState = !isBeingRemoved }
+                        val visibilityState = remember { MutableTransitionState(true) }.apply {
+                            targetState = !isBeingRemoved
+                        }
 
                         // Когда анимация исчезновения закончилась - удаляем реально из списка и БД
                         if (!visibilityState.targetState && visibilityState.isIdle) {
@@ -185,8 +193,14 @@ fun MySpaceScreen(
                         }
 
                         // --- ВИЗУАЛЬНЫЕ ЭФФЕКТЫ ---
-                        val elevation by animateDpAsState(if (isDragging) 16.dp else 0.dp, label = "shadow")
-                        val scale by animateFloatAsState(if (isDragging) 1.05f else 1f, label = "scale")
+                        val elevation by animateDpAsState(
+                            if (isDragging) 16.dp else 0.dp,
+                            label = "shadow"
+                        )
+                        val scale by animateFloatAsState(
+                            if (isDragging) 1.05f else 1f,
+                            label = "scale"
+                        )
                         // zIndex при перетаскивании делаем меньше, чем у диалогов (100+), но выше списка (0)
                         val zIndex = if (isDragging) 50f else 0f
 
@@ -202,7 +216,9 @@ fun MySpaceScreen(
                         AnimatedVisibility(
                             visibleState = visibilityState,
                             // Схлопывание по высоте + исчезновение
-                            exit = shrinkVertically(animationSpec = tween(300)) + fadeOut(animationSpec = tween(300)),
+                            exit = shrinkVertically(animationSpec = tween(300)) + fadeOut(
+                                animationSpec = tween(300)
+                            ),
                             enter = expandVertically() + fadeIn()
                         ) {
                             Box(
@@ -224,11 +240,18 @@ fun MySpaceScreen(
                                     offsetAnim = revealState,
                                     onDeleteClick = {
                                         subjectPendingDelete = subject
-                                        activeResetAction = { scope.launch { revealState.animateTo(0f) } }
+                                        activeResetAction =
+                                            { scope.launch { revealState.animateTo(0f) } }
                                     }
                                 ) {
                                     SubjectSpaceCard(subject = subject, icon = iconStr, onClick = {
-                                        if (!isDragging) navController.navigate("subject_space/${Uri.encode(subject)}")
+                                        if (!isDragging) navController.navigate(
+                                            "subject_space/${
+                                                Uri.encode(
+                                                    subject
+                                                )
+                                            }"
+                                        )
                                     })
                                 }
                             }
@@ -313,7 +336,9 @@ fun MySpaceScreen(
             visible = subjectPendingDelete != null,
             enter = fadeIn(animationSpec = tween(440)),
             exit = fadeOut(animationSpec = tween(440)),
-            modifier = Modifier.zIndex(100f).fillMaxSize()
+            modifier = Modifier
+                .zIndex(100f)
+                .fillMaxSize()
         ) {
             Box(
                 modifier = Modifier
@@ -333,9 +358,15 @@ fun MySpaceScreen(
         // Анимация выезда самой карточки снизу (Slide Up)
         AnimatedVisibility(
             visible = subjectPendingDelete != null,
-            enter = slideInVertically(initialOffsetY = { it }, animationSpec = tween(300)) + fadeIn(animationSpec = tween(300)),
-            exit = slideOutVertically(targetOffsetY = { it }, animationSpec = tween(300)) + fadeOut(animationSpec = tween(300)),
-            modifier = Modifier.align(Alignment.BottomCenter).zIndex(101f)
+            enter = slideInVertically(initialOffsetY = { it }, animationSpec = tween(300)) + fadeIn(
+                animationSpec = tween(300)
+            ),
+            exit = slideOutVertically(targetOffsetY = { it }, animationSpec = tween(300)) + fadeOut(
+                animationSpec = tween(300)
+            ),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .zIndex(101f)
         ) {
             Card(
                 modifier = Modifier.padding(16.dp),
@@ -390,49 +421,177 @@ fun MySpaceScreen(
         }
     }
 }
+
 @Composable
-fun SubjectSpaceScreen(navController: NavController, mySpaceManager: MySpaceManager, subjectName: String, lang: String) {
+fun SubjectSpaceScreen(
+    navController: NavController,
+    mySpaceManager: MySpaceManager,
+    subjectName: String,
+    lang: String
+) {
     var files by remember { mutableStateOf(mySpaceManager.getFilesForSubject(subjectName)) }
     val context = LocalContext.current
     var viewingImage by remember { mutableStateOf<String?>(null) }
     var playingAudioId by remember { mutableStateOf<String?>(null) }
     var fileToDelete by remember { mutableStateOf<SpaceFile?>(null) }
 
-    val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
-        if (uris.isNotEmpty()) {
-            var addedCount = 0
-            uris.forEach { uri -> try { context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) } catch (e: Exception) {}; if (mySpaceManager.saveFileToSubject(subjectName, uri)) addedCount++ }
-            if (addedCount > 0) { files = mySpaceManager.getFilesForSubject(subjectName); Toast.makeText(context, "Додано: $addedCount", Toast.LENGTH_SHORT).show() }
+    val filePicker =
+        rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
+            if (uris.isNotEmpty()) {
+                var addedCount = 0
+                uris.forEach { uri ->
+                    try {
+                        context.contentResolver.takePersistableUriPermission(
+                            uri,
+                            Intent.FLAG_GRANT_READ_URI_PERMISSION
+                        )
+                    } catch (e: Exception) {
+                    }; if (mySpaceManager.saveFileToSubject(subjectName, uri)) addedCount++
+                }
+                if (addedCount > 0) {
+                    files = mySpaceManager.getFilesForSubject(subjectName); Toast.makeText(
+                        context,
+                        "Додано: $addedCount",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
         }
-    }
 
     fun openFile(file: SpaceFile) {
-        when(file.type) {
+        when (file.type) {
             FileType.IMAGE -> viewingImage = file.path
-            FileType.AUDIO -> { if (playingAudioId == file.path) { SimpleAudioPlayer.stop(); playingAudioId = null } else { playingAudioId = file.path; SimpleAudioPlayer.play(file.path) { playingAudioId = null } } }
-            else -> { try { val intent = Intent(Intent.ACTION_VIEW).apply { setDataAndType(FileProvider.getUriForFile(context, "${context.packageName}.provider", File(file.path)), MimeTypeMap.getSingleton().getMimeTypeFromExtension(File(file.path).extension.lowercase()) ?: "*/*"); addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION); addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }; context.startActivity(intent) } catch (e: Exception) { Toast.makeText(context, "Немає додатку", Toast.LENGTH_SHORT).show() } }
+            FileType.AUDIO -> {
+                if (playingAudioId == file.path) {
+                    SimpleAudioPlayer.stop(); playingAudioId = null
+                } else {
+                    playingAudioId = file.path; SimpleAudioPlayer.play(file.path) {
+                        playingAudioId = null
+                    }
+                }
+            }
+
+            else -> {
+                try {
+                    val intent = Intent(Intent.ACTION_VIEW).apply {
+                        setDataAndType(
+                            FileProvider.getUriForFile(
+                                context,
+                                "${context.packageName}.provider",
+                                File(file.path)
+                            ),
+                            MimeTypeMap.getSingleton()
+                                .getMimeTypeFromExtension(File(file.path).extension.lowercase())
+                                ?: "*/*"
+                        ); addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION); addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }; context.startActivity(intent)
+                } catch (e: Exception) {
+                    Toast.makeText(context, "Немає додатку", Toast.LENGTH_SHORT).show()
+                }
+            }
         }
     }
 
-    fun shareFile(file: SpaceFile) { try { val intent = Intent(Intent.ACTION_SEND).apply { type = "*/*"; putExtra(Intent.EXTRA_STREAM, FileProvider.getUriForFile(context, "${context.packageName}.provider", File(file.path))); addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION) }; context.startActivity(Intent.createChooser(intent, null)) } catch (e: Exception) {} }
+    fun shareFile(file: SpaceFile) {
+        try {
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = "*/*"; putExtra(
+                Intent.EXTRA_STREAM,
+                FileProvider.getUriForFile(
+                    context,
+                    "${context.packageName}.provider",
+                    File(file.path)
+                )
+            ); addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }; context.startActivity(Intent.createChooser(intent, null))
+        } catch (e: Exception) {
+        }
+    }
 
     DisposableEffect(Unit) { onDispose { SimpleAudioPlayer.stop() } }
 
-    Box(modifier = Modifier.fillMaxSize().background(BlackBg).statusBarsPadding()) {
+    Box(modifier = Modifier
+        .fillMaxSize()
+        .background(BlackBg)
+        .statusBarsPadding()) {
         Column(modifier = Modifier.fillMaxSize()) {
             SimpleHeader(navController, subjectName)
-            if (files.isEmpty()) { Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) { Column(horizontalAlignment = Alignment.CenterHorizontally) { Icon(Icons.Outlined.FolderOpen, null, tint = Zinc500, modifier = Modifier.size(64.dp)); Spacer(modifier = Modifier.height(16.dp)); Text(Tr.get("no_materials", lang), color = Zinc500) } } }
-            else {
-                LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            if (files.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            Icons.Outlined.FolderOpen,
+                            null,
+                            tint = Zinc500,
+                            modifier = Modifier.size(64.dp)
+                        ); Spacer(modifier = Modifier.height(16.dp)); Text(
+                        Tr.get("no_materials", lang),
+                        color = Zinc500
+                    )
+                    }
+                }
+            } else {
+                LazyColumn(
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
                     items(files) { file ->
                         val isPlaying = playingAudioId == file.path
-                        Card(modifier = Modifier.fillMaxWidth().clickable { openFile(file) }, colors = CardDefaults.cardColors(containerColor = Zinc900), shape = RoundedCornerShape(12.dp)) {
-                            Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Box(modifier = Modifier.size(40.dp).background(Zinc800, RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) { Icon(when(file.type) { FileType.IMAGE -> Icons.Outlined.Image; FileType.AUDIO -> if(isPlaying) Icons.Filled.Stop else Icons.Outlined.Audiotrack; FileType.PDF -> Icons.Outlined.PictureAsPdf; FileType.DOC -> Icons.Outlined.Description; else -> Icons.Outlined.InsertDriveFile }, null, tint = if(isPlaying) RedDelete else Color.White) }
-                                Spacer(modifier = Modifier.width(16.dp)); Column(modifier = Modifier.weight(1f)) { Text(file.name, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis); Text(file.sizeStr, color = Zinc500, fontSize = 12.sp) }
-                                IconButton(onClick = { shareFile(file) }) { Icon(Icons.Default.Share, "Share", tint = Color.White, modifier = Modifier.size(20.dp)) }
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { openFile(file) },
+                            colors = CardDefaults.cardColors(containerColor = Zinc900),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .background(Zinc800, RoundedCornerShape(8.dp)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        when (file.type) {
+                                            FileType.IMAGE -> Icons.Outlined.Image; FileType.AUDIO -> if (isPlaying) Icons.Filled.Stop else Icons.Outlined.Audiotrack; FileType.PDF -> Icons.Outlined.PictureAsPdf; FileType.DOC -> Icons.Outlined.Description; else -> Icons.Outlined.InsertDriveFile
+                                        }, null, tint = if (isPlaying) RedDelete else Color.White
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(16.dp)); Column(
+                                modifier = Modifier.weight(
+                                    1f
+                                )
+                            ) {
+                                Text(
+                                    file.name,
+                                    color = Color.White,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                ); Text(file.sizeStr, color = Zinc500, fontSize = 12.sp)
+                            }
+                                IconButton(onClick = { shareFile(file) }) {
+                                    Icon(
+                                        Icons.Default.Share,
+                                        "Share",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
                                 IconButton(onClick = { fileToDelete = file }) {
-                                    Icon(Icons.Default.Delete, null, tint = Zinc500, modifier = Modifier.size(20.dp))
+                                    Icon(
+                                        Icons.Default.Delete,
+                                        null,
+                                        tint = Zinc500,
+                                        modifier = Modifier.size(20.dp)
+                                    )
                                 }
                             }
                         }
@@ -440,8 +599,39 @@ fun SubjectSpaceScreen(navController: NavController, mySpaceManager: MySpaceMana
                 }
             }
         }
-        FloatingActionButton(onClick = { filePicker.launch(arrayOf("*/*")) }, modifier = Modifier.align(Alignment.BottomEnd).padding(24.dp), containerColor = BlackBg, contentColor = Color.White, shape = CircleShape) { Icon(Icons.Default.Add, "Upload") }
-        if (viewingImage != null) { ImageViewer(viewingImage!!) { viewingImage = null } }
-        if (fileToDelete != null) { AlertDialog(onDismissRequest = { fileToDelete = null }, title = { Text("Видалити?", color = Color.White) }, text = { Text(fileToDelete!!.name, color = Zinc500) }, containerColor = Zinc900, confirmButton = { TextButton(onClick = { if(playingAudioId == fileToDelete!!.path) SimpleAudioPlayer.stop(); mySpaceManager.deleteFile(fileToDelete!!.path); files = mySpaceManager.getFilesForSubject(subjectName); fileToDelete = null }) { Text("Так", color = RedDelete) } }, dismissButton = { TextButton(onClick = { fileToDelete = null }) { Text("Ні", color = Color.White) } }) }
+        FloatingActionButton(
+            onClick = { filePicker.launch(arrayOf("*/*")) },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(24.dp),
+            containerColor = BlackBg,
+            contentColor = Color.White,
+            shape = CircleShape
+        ) { Icon(Icons.Default.Add, "Upload") }
+        if (viewingImage != null) {
+            ImageViewer(viewingImage!!) { viewingImage = null }
+        }
+        if (fileToDelete != null) {
+            AlertDialog(
+                onDismissRequest = { fileToDelete = null },
+                title = { Text("Видалити?", color = Color.White) },
+                text = { Text(fileToDelete!!.name, color = Zinc500) },
+                containerColor = Zinc900,
+                confirmButton = {
+                    TextButton(onClick = {
+                        if (playingAudioId == fileToDelete!!.path) SimpleAudioPlayer.stop(); mySpaceManager.deleteFile(
+                        fileToDelete!!.path
+                    ); files = mySpaceManager.getFilesForSubject(subjectName); fileToDelete = null
+                    }) { Text("Так", color = RedDelete) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { fileToDelete = null }) {
+                        Text(
+                            "Ні",
+                            color = Color.White
+                        )
+                    }
+                })
+        }
     }
 }

@@ -156,7 +156,6 @@ fun WriteHomeworkScreen(
 
     // Визначаємо стан клавіатури
     val isKeyboardOpen = WindowInsets.ime.getBottom(LocalDensity.current) > 0
-    val isFocused by interactionSource.collectIsFocusedAsState()
 
     // Логіка видимості аудіо
     val showAudioPlayer by remember(selectedImages.size, audioFile, isKeyboardOpen) {
@@ -218,7 +217,8 @@ fun WriteHomeworkScreen(
                 targetDate = targetDateReal
             )
         )
-        Toast.makeText(context, "${Tr.get("saved", lang)} -> $targetDateReal", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, "${Tr.get("saved", lang)} -> $targetDateReal", Toast.LENGTH_SHORT)
+            .show()
         navController.navigate("home") { popUpTo("home") { inclusive = true } }
     }
 
@@ -234,18 +234,20 @@ fun WriteHomeworkScreen(
         }
     }
 
-    val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
-        if (success && tempPhotoUri != null) {
-            val savedPath = saveImageToInternalStorage(context, tempPhotoUri!!)
-            if (savedPath != null) selectedImages.add(savedPath)
+    val cameraLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
+            if (success && tempPhotoUri != null) {
+                val savedPath = saveImageToInternalStorage(context, tempPhotoUri!!)
+                if (savedPath != null) selectedImages.add(savedPath)
+            }
         }
-    }
-    val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia()) { uris ->
-        uris.forEach { uri ->
-            val savedPath = saveImageToInternalStorage(context, uri)
-            if (savedPath != null) selectedImages.add(savedPath)
+    val galleryLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia()) { uris ->
+            uris.forEach { uri ->
+                val savedPath = saveImageToInternalStorage(context, uri)
+                if (savedPath != null) selectedImages.add(savedPath)
+            }
         }
-    }
     val launchCamera = {
         try {
             val photoFile = File(context.cacheDir, "hw_photo_${System.currentTimeMillis()}.jpg")
@@ -257,17 +259,23 @@ fun WriteHomeworkScreen(
             Toast.makeText(context, "Помилка запуску: ${e.message}", Toast.LENGTH_LONG).show()
         }
     }
-    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
-        if (isGranted) launchCamera() else Toast.makeText(context, "Потрібен дозвіл!", Toast.LENGTH_LONG).show()
-    }
-    val audioPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
-        if (isGranted) {
-            isRecording = true
-            audioFile = audioRecorder.startRecording()
-        } else {
-            Toast.makeText(context, "Потрібен дозвіл на мікрофон!", Toast.LENGTH_LONG).show()
+    val permissionLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+            if (isGranted) launchCamera() else Toast.makeText(
+                context,
+                "Потрібен дозвіл!",
+                Toast.LENGTH_LONG
+            ).show()
         }
-    }
+    val audioPermissionLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+            if (isGranted) {
+                isRecording = true
+                audioFile = audioRecorder.startRecording()
+            } else {
+                Toast.makeText(context, "Потрібен дозвіл на мікрофон!", Toast.LENGTH_LONG).show()
+            }
+        }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -280,19 +288,35 @@ fun WriteHomeworkScreen(
                 }
         ) {
             SimpleHeader(navController, Tr.get("new_task", lang))
-            if (isTranscribing) LinearProgressIndicator(modifier = Modifier.fillMaxWidth(), color = Color.White, trackColor = Zinc800)
+            if (isTranscribing) LinearProgressIndicator(
+                modifier = Modifier.fillMaxWidth(),
+                color = Color.White,
+                trackColor = Zinc800
+            )
 
-            Column(modifier = Modifier.weight(1f).padding(horizontal = 16.dp, vertical = 8.dp)) {
+            Column(modifier = Modifier
+                .weight(1f)
+                .padding(horizontal = 16.dp, vertical = 8.dp)) {
                 Card(
                     colors = CardDefaults.cardColors(containerColor = Zinc900),
                     shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 12.dp)
                 ) {
-                    Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Text(icon, fontSize = 24.sp)
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
-                            Text(subject, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                            Text(
+                                subject,
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 18.sp
+                            )
                             Text(Tr.get("recording_new", lang), color = Zinc500, fontSize = 12.sp)
                         }
                     }
@@ -301,7 +325,9 @@ fun WriteHomeworkScreen(
                 Card(
                     colors = CardDefaults.cardColors(containerColor = Zinc900),
                     shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier.weight(1f).fillMaxWidth()
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
                 ) {
                     Column(
                         modifier = Modifier
@@ -323,7 +349,11 @@ fun WriteHomeworkScreen(
                                 .weight(1f),
                             decorationBox = { inner ->
                                 Box(modifier = Modifier.fillMaxWidth()) {
-                                    if (text.isEmpty()) Text(Tr.get("write_or_dictate", lang), color = Zinc500, fontSize = 16.sp)
+                                    if (text.isEmpty()) Text(
+                                        Tr.get("write_or_dictate", lang),
+                                        color = Zinc500,
+                                        fontSize = 16.sp
+                                    )
                                     inner()
                                 }
                             }
@@ -333,13 +363,25 @@ fun WriteHomeworkScreen(
                             Spacer(modifier = Modifier.height(16.dp))
                             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 items(selectedImages) { path ->
-                                    Box(modifier = Modifier.size(80.dp).clip(RoundedCornerShape(12.dp))) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(80.dp)
+                                            .clip(RoundedCornerShape(12.dp))
+                                    ) {
                                         AsyncImagePreview(path)
                                         IconButton(
                                             onClick = { selectedImages.remove(path) },
-                                            modifier = Modifier.align(Alignment.TopEnd).background(Color.Black.copy(0.6f), CircleShape).size(20.dp)
+                                            modifier = Modifier
+                                                .align(Alignment.TopEnd)
+                                                .background(Color.Black.copy(0.6f), CircleShape)
+                                                .size(20.dp)
                                         ) {
-                                            Icon(Icons.Default.Close, null, tint = Color.White, modifier = Modifier.size(12.dp))
+                                            Icon(
+                                                Icons.Default.Close,
+                                                null,
+                                                tint = Color.White,
+                                                modifier = Modifier.size(12.dp)
+                                            )
                                         }
                                     }
                                 }
@@ -365,13 +407,22 @@ fun WriteHomeworkScreen(
                         ) { state ->
                             when (state) {
                                 "RECORDING" -> {
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
                                         Spacer(modifier = Modifier.height(16.dp))
-                                        Text(formatSeconds(recordingSeconds), color = RedDelete, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                        Text(
+                                            formatSeconds(recordingSeconds),
+                                            color = RedDelete,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 16.sp
+                                        )
                                         Spacer(modifier = Modifier.height(8.dp))
                                         RecordingVisualizer(isRecording = true)
                                     }
                                 }
+
                                 "PLAYER" -> {
                                     if (audioFile != null) {
                                         Column {
@@ -392,24 +443,41 @@ fun WriteHomeworkScreen(
                                                                 isPlayingPreview = false
                                                             } else {
                                                                 isPlayingPreview = true
-                                                                audioFile?.let { SimpleAudioPlayer.play(it.absolutePath) { isPlayingPreview = false } }
+                                                                audioFile?.let {
+                                                                    SimpleAudioPlayer.play(
+                                                                        it.absolutePath
+                                                                    ) { isPlayingPreview = false }
+                                                                }
                                                             }
                                                         },
                                                         onTranscribe = {
                                                             if (apiKey.isBlank()) {
-                                                                Toast.makeText(context, Tr.get("no_api_key", lang), Toast.LENGTH_LONG).show()
+                                                                Toast.makeText(
+                                                                    context,
+                                                                    Tr.get("no_api_key", lang),
+                                                                    Toast.LENGTH_LONG
+                                                                ).show()
                                                                 return@TelegramAudioPlayer
                                                             }
                                                             isTranscribing = true
                                                             coroutineScope.launch {
                                                                 audioFile?.let {
-                                                                    val transcript = GeminiClient.transcribeAudio(it, apiKey)
+                                                                    val transcript =
+                                                                        GeminiClient.transcribeAudio(
+                                                                            it,
+                                                                            apiKey
+                                                                        )
                                                                     isTranscribing = false
                                                                     if (!transcript.isNullOrBlank()) {
-                                                                        val separator = if (text.isNotEmpty()) " " else ""
+                                                                        val separator =
+                                                                            if (text.isNotEmpty()) " " else ""
                                                                         text += separator + transcript
                                                                     } else {
-                                                                        Toast.makeText(context, "Не розпізнано", Toast.LENGTH_SHORT).show()
+                                                                        Toast.makeText(
+                                                                            context,
+                                                                            "Не розпізнано",
+                                                                            Toast.LENGTH_SHORT
+                                                                        ).show()
                                                                     }
                                                                 }
                                                             }
@@ -419,24 +487,72 @@ fun WriteHomeworkScreen(
                                                         isSaved = false
                                                     )
                                                 }
-                                                IconButton(onClick = { SimpleAudioPlayer.stop(); audioFile = null }) {
+                                                IconButton(onClick = {
+                                                    SimpleAudioPlayer.stop(); audioFile = null
+                                                }) {
                                                     Icon(Icons.Default.Close, null, tint = Zinc500)
                                                 }
                                             }
                                         }
                                     }
                                 }
-                                "HIDDEN" -> { }
+
+                                "HIDDEN" -> {}
                             }
                         }
                     }
                 }
             }
 
-            Column(modifier = Modifier.fillMaxWidth().background(BlackBg).navigationBarsPadding().imePadding()) {
-                Row(modifier = Modifier.padding(16.dp).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Button(onClick = { if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) launchCamera() else permissionLauncher.launch(Manifest.permission.CAMERA) }, modifier = Modifier.weight(1f).height(56.dp), colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent, contentColor = Color.White), shape = RoundedCornerShape(16.dp), border = BorderStroke(1.dp, Zinc700)) { Icon(Icons.Outlined.PhotoCamera, null) }
-                    Button(onClick = { galleryLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }, modifier = Modifier.weight(1f).height(56.dp), colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent, contentColor = Color.White), shape = RoundedCornerShape(16.dp), border = BorderStroke(1.dp, Zinc700)) { Icon(Icons.Outlined.Image, null) }
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(BlackBg)
+                    .navigationBarsPadding()
+                    .imePadding()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Button(
+                        onClick = {
+                            if (ContextCompat.checkSelfPermission(
+                                    context,
+                                    Manifest.permission.CAMERA
+                                ) == PackageManager.PERMISSION_GRANTED
+                            ) launchCamera() else permissionLauncher.launch(Manifest.permission.CAMERA)
+                        },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(56.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color.Transparent,
+                            contentColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(16.dp),
+                        border = BorderStroke(1.dp, Zinc700)
+                    ) { Icon(Icons.Outlined.PhotoCamera, null) }
+                    Button(
+                        onClick = {
+                            galleryLauncher.launch(
+                                PickVisualMediaRequest(
+                                    ActivityResultContracts.PickVisualMedia.ImageOnly
+                                )
+                            )
+                        },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(56.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color.Transparent,
+                            contentColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(16.dp),
+                        border = BorderStroke(1.dp, Zinc700)
+                    ) { Icon(Icons.Outlined.Image, null) }
                     Button(
                         onClick = {
                             if (isRecording) {
@@ -444,33 +560,56 @@ fun WriteHomeworkScreen(
                                 audioRecorder.stopRecording()
                             } else {
                                 if (audioFile == null) {
-                                    if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                                    if (ContextCompat.checkSelfPermission(
+                                            context,
+                                            Manifest.permission.RECORD_AUDIO
+                                        ) == PackageManager.PERMISSION_GRANTED
+                                    ) {
                                         isRecording = true
                                         audioFile = audioRecorder.startRecording()
                                     } else {
                                         audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                                     }
                                 } else {
-                                    Toast.makeText(context, "Аудіо вже є", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, "Аудіо вже є", Toast.LENGTH_SHORT)
+                                        .show()
                                 }
                             }
                         },
-                        modifier = Modifier.weight(1f).height(56.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(56.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = if (isRecording) RedDelete.copy(alpha = 0.2f) else Color.Transparent,
                             contentColor = if (isRecording) RedDelete else Color.White
                         ),
                         shape = RoundedCornerShape(16.dp),
-                        border = if (isRecording) BorderStroke(1.dp, RedDelete) else BorderStroke(1.dp, Zinc700),
+                        border = if (isRecording) BorderStroke(
+                            1.dp,
+                            RedDelete
+                        ) else BorderStroke(1.dp, Zinc700),
                         enabled = audioFile == null || isRecording
                     ) {
                         Icon(if (isRecording) Icons.Filled.Stop else Icons.Outlined.Mic, null)
                     }
 
-                    val canSave = text.isNotBlank() || selectedImages.isNotEmpty() || audioFile != null
-                    val saveBtnBg by animateColorAsState(targetValue = if (canSave) Color.White else Color.Transparent, animationSpec = tween(300), label = "bg")
-                    val saveBtnIconColor by animateColorAsState(targetValue = if (canSave) Color.Black else Zinc700, animationSpec = tween(300), label = "icon")
-                    val saveBtnBorderColor by animateColorAsState(targetValue = if (canSave) Color.Transparent else Zinc700.copy(alpha = 0.3f), animationSpec = tween(300), label = "border")
+                    val canSave =
+                        text.isNotBlank() || selectedImages.isNotEmpty() || audioFile != null
+                    val saveBtnBg by animateColorAsState(
+                        targetValue = if (canSave) Color.White else Color.Transparent,
+                        animationSpec = tween(300),
+                        label = "bg"
+                    )
+                    val saveBtnIconColor by animateColorAsState(
+                        targetValue = if (canSave) Color.Black else Zinc700,
+                        animationSpec = tween(300),
+                        label = "icon"
+                    )
+                    val saveBtnBorderColor by animateColorAsState(
+                        targetValue = if (canSave) Color.Transparent else Zinc700.copy(
+                            alpha = 0.3f
+                        ), animationSpec = tween(300), label = "border"
+                    )
 
                     // --- ОНОВЛЕНА КНОПКА ЗБЕРЕЖЕННЯ (ПІДТРИМУЄ LONG CLICK) ---
                     Box(
@@ -547,7 +686,12 @@ fun WriteHomeworkScreen(
                                     fontWeight = FontWeight.Medium,
                                     color = Color.White
                                 )
-                                Icon(Icons.Default.ArrowForwardIos, contentDescription = null, tint = Zinc500, modifier = Modifier.size(14.dp))
+                                Icon(
+                                    Icons.Default.ArrowForwardIos,
+                                    contentDescription = null,
+                                    tint = Zinc500,
+                                    modifier = Modifier.size(14.dp)
+                                )
                             }
                         }
                     }

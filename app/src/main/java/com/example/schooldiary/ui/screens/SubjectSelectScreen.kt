@@ -48,10 +48,17 @@ import com.example.schooldiary.Zinc500
 import com.example.schooldiary.Zinc900
 
 @Composable
-fun SubjectSelectScreen(navController: NavController, scheduleManager: ScheduleManager, lang: String) {
+fun SubjectSelectScreen(
+    navController: NavController,
+    scheduleManager: ScheduleManager,
+    lang: String
+) {
     val subjects = remember { scheduleManager.getUniqueSubjects(scheduleManager.getSchedule()) }
 
-    Box(modifier = Modifier.fillMaxSize().background(BlackBg).statusBarsPadding()) {
+    Box(modifier = Modifier
+        .fillMaxSize()
+        .background(BlackBg)
+        .statusBarsPadding()) {
         if (subjects.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(Tr.get("fill_schedule_first", lang), color = Zinc500)
@@ -59,7 +66,12 @@ fun SubjectSelectScreen(navController: NavController, scheduleManager: ScheduleM
         } else {
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
-                contentPadding = PaddingValues(top = 100.dp, start = 16.dp, end = 16.dp, bottom = 40.dp),
+                contentPadding = PaddingValues(
+                    top = 100.dp,
+                    start = 16.dp,
+                    end = 16.dp,
+                    bottom = 40.dp
+                ),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.fillMaxSize()
@@ -69,7 +81,15 @@ fun SubjectSelectScreen(navController: NavController, scheduleManager: ScheduleM
                         modifier = Modifier
                             .aspectRatio(1f)
                             .shadow(8.dp, RoundedCornerShape(20.dp), spotColor = Color.Black)
-                            .clickable { navController.navigate("write_hw/${Uri.encode(lesson.subject)}/${Uri.encode(lesson.icon)}") },
+                            .clickable {
+                                navController.navigate(
+                                    "write_hw/${Uri.encode(lesson.subject)}/${
+                                        Uri.encode(
+                                            lesson.icon
+                                        )
+                                    }"
+                                )
+                            },
                         // ПОВЕРНУТО МИНУЛИЙ КОЛІР (Zinc900)
                         colors = CardDefaults.cardColors(containerColor = Zinc900),
                         shape = RoundedCornerShape(20.dp)

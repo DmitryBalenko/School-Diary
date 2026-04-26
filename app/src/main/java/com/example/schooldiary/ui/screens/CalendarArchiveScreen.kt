@@ -92,7 +92,11 @@ fun CalendarArchiveScreen(navController: NavController, hwManager: HomeworkManag
 
     fun getDisplayDate(hw: Homework): LocalDate {
         return if (!hw.targetDate.isNullOrEmpty()) {
-            try { LocalDate.parse(hw.targetDate) } catch (e: Exception) { LocalDate.parse(hw.date) }
+            try {
+                LocalDate.parse(hw.targetDate)
+            } catch (e: Exception) {
+                LocalDate.parse(hw.date)
+            }
         } else {
             LocalDate.parse(hw.date)
         }
@@ -119,7 +123,9 @@ fun CalendarArchiveScreen(navController: NavController, hwManager: HomeworkManag
             contentColor = Color.White,
             dragHandle = { BottomSheetDefaults.DragHandle(color = Zinc700) }
         ) {
-            Column(modifier = Modifier.padding(horizontal = 24.dp).padding(bottom = 32.dp)) {
+            Column(modifier = Modifier
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 32.dp)) {
                 Text(
                     text = "${selectedDate.dayOfMonth}.${selectedDate.monthValue}.${selectedDate.year}",
                     fontSize = 24.sp,
@@ -129,7 +135,12 @@ fun CalendarArchiveScreen(navController: NavController, hwManager: HomeworkManag
                 )
 
                 if (tasksForSelectedDate.isEmpty()) {
-                    Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(32.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
                         Text(Tr.get("events_none", lang), color = Zinc500, fontSize = 16.sp)
                     }
                 } else {
@@ -140,13 +151,27 @@ fun CalendarArchiveScreen(navController: NavController, hwManager: HomeworkManag
                                 shape = RoundedCornerShape(16.dp),
                                 border = BorderStroke(1.dp, Zinc800)
                             ) {
-                                Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Row(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
                                     Text(hw.icon, fontSize = 28.sp)
                                     Spacer(modifier = Modifier.width(16.dp))
                                     Column {
-                                        Text(hw.subject, fontWeight = FontWeight.Bold, color = Color.White, fontSize = 16.sp)
+                                        Text(
+                                            hw.subject,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.White,
+                                            fontSize = 16.sp
+                                        )
                                         if (hw.text.isNotEmpty()) {
-                                            Text(hw.text, color = Zinc500, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                            Text(
+                                                hw.text,
+                                                color = Zinc500,
+                                                fontSize = 13.sp,
+                                                maxLines = 2,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
                                         }
                                     }
                                 }
@@ -159,7 +184,10 @@ fun CalendarArchiveScreen(navController: NavController, hwManager: HomeworkManag
     }
 
     // --- ГОЛОВНИЙ ЕКРАН (БЕЗ ТІНЕЙ) ---
-    Box(modifier = Modifier.fillMaxSize().background(BlackBg).statusBarsPadding()) {
+    Box(modifier = Modifier
+        .fillMaxSize()
+        .background(BlackBg)
+        .statusBarsPadding()) {
 
         Column(modifier = Modifier.fillMaxSize()) {
 
@@ -170,7 +198,9 @@ fun CalendarArchiveScreen(navController: NavController, hwManager: HomeworkManag
 
                 // --- РЯДОК З МІСЯЦЕМ ТА СТРІЛКАМИ ---
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 16.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
@@ -182,18 +212,27 @@ fun CalendarArchiveScreen(navController: NavController, hwManager: HomeworkManag
                             val fadeSpec = tween<Float>(150)
                             if (isNext) {
                                 (slideInVertically(animSpec) { height -> height } + fadeIn(fadeSpec)).togetherWith(
-                                    slideOutVertically(animSpec) { height -> -height } + fadeOut(fadeSpec)
+                                    slideOutVertically(animSpec) { height -> -height } + fadeOut(
+                                        fadeSpec
+                                    )
                                 )
                             } else {
                                 (slideInVertically(animSpec) { height -> -height } + fadeIn(fadeSpec)).togetherWith(
-                                    slideOutVertically(animSpec) { height -> height } + fadeOut(fadeSpec)
+                                    slideOutVertically(animSpec) { height -> height } + fadeOut(
+                                        fadeSpec
+                                    )
                                 )
                             }
                         },
                         label = "MonthAnim"
                     ) { targetMonth ->
                         Text(
-                            text = "${targetMonth.month.getDisplayName(java.time.format.TextStyle.FULL, if(lang=="ua") Locale("uk") else Locale.ENGLISH).replaceFirstChar { it.uppercase() }} ${targetMonth.year}",
+                            text = "${
+                                targetMonth.month.getDisplayName(
+                                    java.time.format.TextStyle.FULL,
+                                    if (lang == "ua") Locale("uk") else Locale.ENGLISH
+                                ).replaceFirstChar { it.uppercase() }
+                            } ${targetMonth.year}",
                             fontSize = 28.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
@@ -201,23 +240,38 @@ fun CalendarArchiveScreen(navController: NavController, hwManager: HomeworkManag
                     }
 
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Box(modifier = Modifier.size(36.dp).background(Zinc900, CircleShape).clickable {
-                            isNext = false // Гортаємо назад
-                            yearMonth = yearMonth.minusMonths(1)
-                        }, contentAlignment = Alignment.Center) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .background(Zinc900, CircleShape)
+                                .clickable {
+                                    isNext = false // Гортаємо назад
+                                    yearMonth = yearMonth.minusMonths(1)
+                                }, contentAlignment = Alignment.Center
+                        ) {
                             Icon(Icons.Default.ChevronLeft, null, tint = Color.White)
                         }
-                        Box(modifier = Modifier.size(36.dp).background(Zinc900, CircleShape).clickable {
-                            isNext = true // Гортаємо вперед
-                            yearMonth = yearMonth.plusMonths(1)
-                        }, contentAlignment = Alignment.Center) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .background(Zinc900, CircleShape)
+                                .clickable {
+                                    isNext = true // Гортаємо вперед
+                                    yearMonth = yearMonth.plusMonths(1)
+                                }, contentAlignment = Alignment.Center
+                        ) {
                             Icon(Icons.Default.ChevronRight, null, tint = Color.White)
                         }
                     }
                 }
 
                 // --- ДНІ ТИЖНЯ ---
-                Row(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
                     weekDays.forEach { dayName ->
                         Text(
                             text = dayName,
@@ -239,7 +293,9 @@ fun CalendarArchiveScreen(navController: NavController, hwManager: HomeworkManag
 
                         if (isNext) {
                             (slideInHorizontally(animSpec) { width -> width } + fadeIn(fadeSpec)).togetherWith(
-                                slideOutHorizontally(animSpec) { width -> -width } + fadeOut(fadeSpec)
+                                slideOutHorizontally(animSpec) { width -> -width } + fadeOut(
+                                    fadeSpec
+                                )
                             )
                         } else {
                             (slideInHorizontally(animSpec) { width -> -width } + fadeIn(fadeSpec)).togetherWith(
@@ -257,7 +313,9 @@ fun CalendarArchiveScreen(navController: NavController, hwManager: HomeworkManag
                         val daysInMonthVal = targetMonth.lengthOfMonth()
                         val firstDayOfWeek = firstOfMonth.dayOfWeek.value
                         repeat(firstDayOfWeek - 1) { days.add(null) }
-                        for (i in 1..daysInMonthVal) { days.add(targetMonth.atDay(i)) }
+                        for (i in 1..daysInMonthVal) {
+                            days.add(targetMonth.atDay(i))
+                        }
                         days
                     }
 
@@ -290,7 +348,10 @@ fun CalendarArchiveScreen(navController: NavController, hwManager: HomeworkManag
                                         },
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.Center
+                                    ) {
                                         Text(
                                             text = date.dayOfMonth.toString(),
                                             color = if (isToday && !isSelected) BlueAction else Color.White,
@@ -303,7 +364,10 @@ fun CalendarArchiveScreen(navController: NavController, hwManager: HomeworkManag
                                             Box(
                                                 modifier = Modifier
                                                     .size(4.dp)
-                                                    .background(if (isSelected) Color.White else BlueAction, CircleShape)
+                                                    .background(
+                                                        if (isSelected) Color.White else BlueAction,
+                                                        CircleShape
+                                                    )
                                             )
                                         }
                                     }
@@ -330,7 +394,11 @@ fun CalendarArchiveScreen(navController: NavController, hwManager: HomeworkManag
                         Spacer(modifier = Modifier.width(16.dp))
                         Column {
                             Text(Tr.get("archived", lang), color = Zinc500, fontSize = 12.sp)
-                            Text("${tasksForSelectedDate.size} завдань за ${selectedDate.dayOfMonth}.${selectedDate.monthValue}", color = Color.White, fontWeight = FontWeight.Bold)
+                            Text(
+                                "${tasksForSelectedDate.size} завдань за ${selectedDate.dayOfMonth}.${selectedDate.monthValue}",
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
                     }
                 }

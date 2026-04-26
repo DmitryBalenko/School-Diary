@@ -73,43 +73,120 @@ fun HomeScreen(navController: NavController, hwManager: HomeworkManager, lang: S
 
     LaunchedEffect(Unit) { hwCount = hwManager.getHomeworkList().filter { !it.isArchived }.size }
 
-    Column(modifier = Modifier.fillMaxSize().background(BlackBg).statusBarsPadding().padding(20.dp)) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(BlackBg)
+            .statusBarsPadding()
+            .padding(20.dp)
+    ) {
 
         // --- ВЕРХНЯ ПАНЕЛЬ ---
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Column { Text(Tr.get("app_name", lang), color = Zinc500, fontSize = 16.sp, fontWeight = FontWeight.SemiBold) }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(
+                    Tr.get("app_name", lang),
+                    color = Zinc500,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                IconButton(onClick = { showInfoDialog = true }, modifier = Modifier.background(Zinc900, CircleShape)) {
+                IconButton(
+                    onClick = { showInfoDialog = true },
+                    modifier = Modifier.background(Zinc900, CircleShape)
+                ) {
                     Icon(Icons.Default.Info, contentDescription = "Info", tint = Color.White)
                 }
-                IconButton(onClick = { navController.navigate("settings_main") }, modifier = Modifier.background(Zinc900, CircleShape)) {
-                    Icon(Icons.Default.Settings, contentDescription = "Settings", tint = Color.White)
+                IconButton(
+                    onClick = { navController.navigate("settings_main") },
+                    modifier = Modifier.background(Zinc900, CircleShape)
+                ) {
+                    Icon(
+                        Icons.Default.Settings,
+                        contentDescription = "Settings",
+                        tint = Color.White
+                    )
                 }
             }
         }
 
         Spacer(modifier = Modifier.height(30.dp))
         Text(Tr.get("hello", lang), color = Zinc500, fontSize = 13.sp, letterSpacing = 2.sp)
-        Text(Tr.get("what_to_do", lang), color = Color.White, fontSize = 34.sp, fontWeight = FontWeight.Bold, lineHeight = 40.sp)
+        Text(
+            Tr.get("what_to_do", lang),
+            color = Color.White,
+            fontSize = 34.sp,
+            fontWeight = FontWeight.Bold,
+            lineHeight = 40.sp
+        )
         Spacer(modifier = Modifier.height(30.dp))
 
         // --- КАРТКИ МЕНЮ ---
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            AnimatedCard(onClick = { navController.navigate("subject_select") }, modifier = Modifier.fillMaxWidth().height(140.dp)) {
-                Column(modifier = Modifier.align(Alignment.CenterStart)) { Text("✏️", fontSize = 32.sp); Spacer(modifier = Modifier.height(12.dp)); Text(Tr.get("write_hw", lang), color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold); Text(
-                    Tr.get("add_new_task", lang), color = Zinc500, fontSize = 13.sp) }
+            AnimatedCard(
+                onClick = { navController.navigate("subject_select") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(140.dp)
+            ) {
+                Column(modifier = Modifier.align(Alignment.CenterStart)) {
+                    Text(
+                        "✏️",
+                        fontSize = 32.sp
+                    ); Spacer(modifier = Modifier.height(12.dp)); Text(
+                    Tr.get("write_hw", lang),
+                    color = Color.White,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold
+                ); Text(
+                    Tr.get("add_new_task", lang), color = Zinc500, fontSize = 13.sp
+                )
+                }
             }
 
-            AnimatedCard(onClick = { navController.navigate("unified_hw") }, modifier = Modifier.fillMaxWidth().height(140.dp)) {
-                Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.SpaceBetween, horizontalAlignment = Alignment.Start) {
+            AnimatedCard(
+                onClick = { navController.navigate("unified_hw") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(140.dp)
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.SpaceBetween,
+                    horizontalAlignment = Alignment.Start
+                ) {
                     Text("👀", fontSize = 32.sp)
                     Column {
-                        Text(Tr.get("view_hw", lang), color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold, style = TextStyle(platformStyle = androidx.compose.ui.text.PlatformTextStyle(includeFontPadding = false)))
+                        Text(
+                            Tr.get("view_hw", lang),
+                            color = Color.White,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            style = TextStyle(
+                                platformStyle = androidx.compose.ui.text.PlatformTextStyle(
+                                    includeFontPadding = false
+                                )
+                            )
+                        )
                         Spacer(modifier = Modifier.height(8.dp))
 
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(Tr.get("active_tasks", lang) + " ", color = Zinc500, fontSize = 13.sp, style = TextStyle(platformStyle = androidx.compose.ui.text.PlatformTextStyle(includeFontPadding = false)))
+                            Text(
+                                Tr.get("active_tasks", lang) + " ",
+                                color = Zinc500,
+                                fontSize = 13.sp,
+                                style = TextStyle(
+                                    platformStyle = androidx.compose.ui.text.PlatformTextStyle(
+                                        includeFontPadding = false
+                                    )
+                                )
+                            )
                             Spacer(modifier = Modifier.width(8.dp))
 
                             Box(
@@ -120,7 +197,18 @@ fun HomeScreen(navController: NavController, hwManager: HomeworkManager, lang: S
                                     .background(Zinc700, shape = RoundedCornerShape(percent = 50))
                                     .padding(horizontal = 8.dp)
                             ) {
-                                Text(text = "$hwCount", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, style = TextStyle(platformStyle = androidx.compose.ui.text.PlatformTextStyle(includeFontPadding = false)))
+                                Text(
+                                    text = "$hwCount",
+                                    color = Color.White,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    textAlign = TextAlign.Center,
+                                    style = TextStyle(
+                                        platformStyle = androidx.compose.ui.text.PlatformTextStyle(
+                                            includeFontPadding = false
+                                        )
+                                    )
+                                )
                             }
                         }
                     }
@@ -129,9 +217,66 @@ fun HomeScreen(navController: NavController, hwManager: HomeworkManager, lang: S
 
             val interactionSource = remember { MutableInteractionSource() }
             val isPressed by interactionSource.collectIsPressedAsState()
-            val scale by animateFloatAsState(targetValue = if (isPressed) 0.97f else 1f, label = "scale")
-            Card(modifier = Modifier.fillMaxWidth().height(140.dp).scale(scale).clickable(interactionSource = interactionSource, indication = null) { navController.navigate("my_space") }, shape = RoundedCornerShape(28.dp), colors = CardDefaults.cardColors(containerColor = Zinc900)) {
-                Box(modifier = Modifier.fillMaxSize()) { Canvas(modifier = Modifier.fillMaxSize()) { drawRect(brush = Brush.radialGradient(colors = listOf(Color(0xFF2C2C2E), Color(0xFF1C1C1E)), center = Offset(size.width * 0.8f, size.height * 0.2f), radius = size.width * 0.8f)); val starOffsets = listOf(Offset(size.width * 0.1f, size.height * 0.2f), Offset(size.width * 0.4f, size.height * 0.15f), Offset(size.width * 0.8f, size.height * 0.3f), Offset(size.width * 0.6f, size.height * 0.6f)); starOffsets.forEach { drawCircle(Color.White.copy(alpha = 0.5f), radius = 2.dp.toPx(), center = it) } }; Box(modifier = Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.CenterStart) { Text(text = Tr.get("my_space", lang), color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp) }; Box(modifier = Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.CenterEnd) { Icon(Icons.Default.ArrowForward, null, tint = Zinc500) } }
+            val scale by animateFloatAsState(
+                targetValue = if (isPressed) 0.97f else 1f,
+                label = "scale"
+            )
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(140.dp)
+                    .scale(scale)
+                    .clickable(
+                        interactionSource = interactionSource,
+                        indication = null
+                    ) { navController.navigate("my_space") },
+                shape = RoundedCornerShape(28.dp),
+                colors = CardDefaults.cardColors(containerColor = Zinc900)
+            ) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    Canvas(modifier = Modifier.fillMaxSize()) {
+                        drawRect(
+                            brush = Brush.radialGradient(
+                                colors = listOf(
+                                    Color(0xFF2C2C2E),
+                                    Color(0xFF1C1C1E)
+                                ),
+                                center = Offset(size.width * 0.8f, size.height * 0.2f),
+                                radius = size.width * 0.8f
+                            )
+                        )
+                        val starOffsets = listOf(
+                            Offset(size.width * 0.1f, size.height * 0.2f),
+                            Offset(size.width * 0.4f, size.height * 0.15f),
+                            Offset(size.width * 0.8f, size.height * 0.3f),
+                            Offset(size.width * 0.6f, size.height * 0.6f)
+                        ); starOffsets.forEach {
+                        drawCircle(
+                            Color.White.copy(alpha = 0.5f),
+                            radius = 2.dp.toPx(),
+                            center = it
+                        )
+                    }
+                    }; Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(24.dp),
+                    contentAlignment = Alignment.CenterStart
+                ) {
+                    Text(
+                        text = Tr.get("my_space", lang),
+                        color = Color.White,
+                        fontSize = 32.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp
+                    )
+                }; Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(24.dp),
+                    contentAlignment = Alignment.CenterEnd
+                ) { Icon(Icons.Default.ArrowForward, null, tint = Zinc500) }
+                }
             }
         }
     }
@@ -192,7 +337,10 @@ fun HomeScreen(navController: NavController, hwManager: HomeworkManager, lang: S
                     Button(
                         onClick = {
                             try {
-                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://t.me/SchoolDiaryProject"))
+                                val intent = Intent(
+                                    Intent.ACTION_VIEW,
+                                    Uri.parse("https://t.me/SchoolDiaryProject")
+                                )
                                 context.startActivity(intent)
                             } catch (e: Exception) {
                                 Toast.makeText(context, "Error", Toast.LENGTH_SHORT).show()

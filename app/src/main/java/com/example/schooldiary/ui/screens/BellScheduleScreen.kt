@@ -87,8 +87,15 @@ fun BellScheduleScreen(navController: NavController, bellManager: BellManager, l
             }
     ) {
         LazyColumn(
-            modifier = Modifier.fillMaxSize().imePadding(),
-            contentPadding = PaddingValues(top = 140.dp, start = 16.dp, end = 16.dp, bottom = 120.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .imePadding(),
+            contentPadding = PaddingValues(
+                top = 140.dp,
+                start = 16.dp,
+                end = 16.dp,
+                bottom = 120.dp
+            ),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(
@@ -102,7 +109,6 @@ fun BellScheduleScreen(navController: NavController, bellManager: BellManager, l
 
                 val visibleState = remember {
                     MutableTransitionState(initialState = !isNewItem).apply {
-                        var targetState = true
                     }
                 }
 
@@ -173,15 +179,23 @@ fun BellScheduleScreen(navController: NavController, bellManager: BellManager, l
             }
 
             item {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(top = 8.dp)) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.padding(top = 8.dp)
+                ) {
                     Button(
                         onClick = {
                             if (bells.isNotEmpty()) {
                                 bells.removeAt(bells.lastIndex)
                             }
                         },
-                        modifier = Modifier.weight(1f).height(50.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = RedDelete.copy(alpha = 0.15f), contentColor = RedDelete),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(50.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = RedDelete.copy(alpha = 0.15f),
+                            contentColor = RedDelete
+                        ),
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text("- " + Tr.get("delete", lang), fontWeight = FontWeight.Bold)
@@ -192,8 +206,13 @@ fun BellScheduleScreen(navController: NavController, bellManager: BellManager, l
                             val newId = System.currentTimeMillis().toInt()
                             bells.add(BellTime(newId, "00:00", "00:00"))
                         },
-                        modifier = Modifier.weight(1f).height(50.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Zinc800, contentColor = Color.White),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(50.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Zinc800,
+                            contentColor = Color.White
+                        ),
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text("+ " + Tr.get("add", lang), fontWeight = FontWeight.Bold)
@@ -225,13 +244,17 @@ fun BellScheduleScreen(navController: NavController, bellManager: BellManager, l
                     )
                 )
         ) {
-            Box(modifier = Modifier.statusBarsPadding().padding(top = 0.dp)) {
+            Box(modifier = Modifier
+                .statusBarsPadding()
+                .padding(top = 0.dp)) {
                 SimpleHeader(navController, Tr.get("bells", lang))
             }
         }
 
         // --- НИЖНІЙ ГРАДІЄНТ (Той самий список, але віддзеркалений) ---
-        Box(modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter)) {
+        Box(modifier = Modifier
+            .fillMaxWidth()
+            .align(Alignment.BottomCenter)) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()

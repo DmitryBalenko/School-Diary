@@ -85,7 +85,6 @@ import org.burnoutcrew.reorderable.ReorderableItem
 import org.burnoutcrew.reorderable.detectReorderAfterLongPress
 import org.burnoutcrew.reorderable.rememberReorderableLazyListState
 import org.burnoutcrew.reorderable.reorderable
-import kotlin.collections.map
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -104,7 +103,15 @@ fun EditDayScreen(
         mutableStateListOf<Lesson>().apply {
             if (savedSchedule.containsKey(dayKey)) {
                 addAll(savedSchedule[dayKey]!!.map { it.copy() })
-                while (size < bells.size) add(Lesson(bells[size].start, bells[size].end, "", "", "📝"))
+                while (size < bells.size) add(
+                    Lesson(
+                        bells[size].start,
+                        bells[size].end,
+                        "",
+                        "",
+                        "📝"
+                    )
+                )
             } else {
                 addAll(bells.map { Lesson(it.start, it.end, "", "", "📝") })
             }
@@ -133,7 +140,9 @@ fun EditDayScreen(
                     lessons[selectedLessonIndex] = lessons[selectedLessonIndex].copy(icon = emoji)
                     if (targetSubject.isNotEmpty()) {
                         for (i in lessons.indices) {
-                            if (lessons[i].subject.trim().equals(targetSubject, ignoreCase = true)) {
+                            if (lessons[i].subject.trim()
+                                    .equals(targetSubject, ignoreCase = true)
+                            ) {
                                 lessons[i] = lessons[i].copy(icon = emoji)
                             }
                         }
@@ -145,7 +154,9 @@ fun EditDayScreen(
                                     val dayLessons = fullSchedule[day]!!.toMutableList()
                                     var dayChanged = false
                                     for (i in dayLessons.indices) {
-                                        if (dayLessons[i].subject.trim().equals(targetSubject, ignoreCase = true)) {
+                                        if (dayLessons[i].subject.trim()
+                                                .equals(targetSubject, ignoreCase = true)
+                                        ) {
                                             dayLessons[i] = dayLessons[i].copy(icon = emoji)
                                             dayChanged = true
                                             scheduleChanged = true
@@ -165,16 +176,22 @@ fun EditDayScreen(
     }
 
     // --- UI ЕКРАНУ ---
-    Box(modifier = Modifier
-        .fillMaxSize()
-        .background(BlackBg)
-        .pointerInput(Unit) {
-            detectTapGestures(onTap = { focusManager.clearFocus() })
-        }
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(BlackBg)
+            .pointerInput(Unit) {
+                detectTapGestures(onTap = { focusManager.clearFocus() })
+            }
     ) {
         LazyColumn(
             state = state.listState,
-            contentPadding = PaddingValues(top = 140.dp, start = 16.dp, end = 16.dp, bottom = 100.dp),
+            contentPadding = PaddingValues(
+                top = 140.dp,
+                start = 16.dp,
+                end = 16.dp,
+                bottom = 100.dp
+            ),
             verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier
                 .fillMaxSize()
@@ -184,7 +201,10 @@ fun EditDayScreen(
             itemsIndexed(items = lessons, key = { _, item -> item.id }) { index, lesson ->
                 ReorderableItem(state, key = lesson.id) { isDragging ->
                     val bell = if (index < bells.size) bells[index] else BellTime(0, "??", "??")
-                    val elevation by animateDpAsState(if (isDragging) 8.dp else 0.dp, label = "shadow")
+                    val elevation by animateDpAsState(
+                        if (isDragging) 8.dp else 0.dp,
+                        label = "shadow"
+                    )
                     val scale by animateFloatAsState(if (isDragging) 1.02f else 1f, label = "scale")
 
                     // 1. Створюємо Requester для цієї конкретної картки
@@ -218,7 +238,12 @@ fun EditDayScreen(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 modifier = Modifier.width(44.dp)
                             ) {
-                                Text(bell.start, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Text(
+                                    bell.start,
+                                    color = Color.White,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
                                 Text(bell.end, color = Zinc500, fontSize = 10.sp)
                             }
 
@@ -247,7 +272,9 @@ fun EditDayScreen(
                                     // НАЗВА ПРЕДМЕТУ
                                     BasicTextField(
                                         value = lesson.subject,
-                                        onValueChange = { v -> lessons[index] = lessons[index].copy(subject = v) },
+                                        onValueChange = { v ->
+                                            lessons[index] = lessons[index].copy(subject = v)
+                                        },
                                         textStyle = TextStyle(
                                             color = if (lesson.subject.isEmpty()) Zinc500 else Color.White,
                                             fontSize = 16.sp
@@ -264,10 +291,17 @@ fun EditDayScreen(
                                                 }
                                             },
                                         decorationBox = { inner ->
-                                            if (lesson.subject.isEmpty()) Text(Tr.get("window", lang), color = Zinc500) else inner()
+                                            if (lesson.subject.isEmpty()) Text(
+                                                Tr.get(
+                                                    "window",
+                                                    lang
+                                                ), color = Zinc500
+                                            ) else inner()
                                         }
                                     )
-                                    Spacer(modifier = Modifier.weight(1f).height(32.dp))
+                                    Spacer(modifier = Modifier
+                                        .weight(1f)
+                                        .height(32.dp))
                                 }
 
                                 Spacer(modifier = Modifier.height(4.dp))
@@ -276,7 +310,9 @@ fun EditDayScreen(
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     BasicTextField(
                                         value = lesson.room,
-                                        onValueChange = { v -> lessons[index] = lessons[index].copy(room = v) },
+                                        onValueChange = { v ->
+                                            lessons[index] = lessons[index].copy(room = v)
+                                        },
                                         textStyle = TextStyle(color = Zinc500, fontSize = 12.sp),
                                         cursorBrush = SolidColor(Zinc500),
                                         modifier = Modifier
@@ -290,10 +326,16 @@ fun EditDayScreen(
                                                 }
                                             },
                                         decorationBox = { inner ->
-                                            if (lesson.room.isEmpty()) Text(Tr.get("cabinet", lang), color = Zinc700, fontSize = 12.sp) else inner()
+                                            if (lesson.room.isEmpty()) Text(
+                                                Tr.get("cabinet", lang),
+                                                color = Zinc700,
+                                                fontSize = 12.sp
+                                            ) else inner()
                                         }
                                     )
-                                    Spacer(modifier = Modifier.weight(1f).height(20.dp))
+                                    Spacer(modifier = Modifier
+                                        .weight(1f)
+                                        .height(20.dp))
                                 }
                             }
 
@@ -301,10 +343,18 @@ fun EditDayScreen(
 
                             // КНОПКА ОЧИСТИТИ
                             IconButton(
-                                onClick = { lessons[index] = lessons[index].copy(subject = "", room = "", icon = "📝") },
+                                onClick = {
+                                    lessons[index] =
+                                        lessons[index].copy(subject = "", room = "", icon = "📝")
+                                },
                                 modifier = Modifier.size(24.dp)
                             ) {
-                                Icon(Icons.Default.Delete, null, tint = Zinc500, modifier = Modifier.size(20.dp))
+                                Icon(
+                                    Icons.Default.Delete,
+                                    null,
+                                    tint = Zinc500,
+                                    modifier = Modifier.size(20.dp)
+                                )
                             }
                         }
                     }
@@ -354,15 +404,25 @@ fun EditDayScreen(
         }
 
         // --- НИЖНЯ ПАНЕЛЬ (Кнопка Зберегти під клавіатурою) ---
-        Box(modifier = Modifier
-            .fillMaxWidth()
-            .align(Alignment.BottomCenter)
-        ) {
-            Box(modifier = Modifier
+        Box(
+            modifier = Modifier
                 .fillMaxWidth()
-                .height(100.dp)
                 .align(Alignment.BottomCenter)
-                .background(Brush.verticalGradient(colors = listOf(Color.Transparent, BlackBg.copy(alpha = 0.9f), BlackBg)))
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(100.dp)
+                    .align(Alignment.BottomCenter)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                BlackBg.copy(alpha = 0.9f),
+                                BlackBg
+                            )
+                        )
+                    )
             )
 
             Button(

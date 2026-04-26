@@ -1,7 +1,27 @@
-@file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class, androidx.compose.material3.ExperimentalMaterial3Api::class)
+@file:OptIn(
+    androidx.compose.foundation.ExperimentalFoundationApi::class,
+    androidx.compose.material3.ExperimentalMaterial3Api::class
+)
+
 package com.bymrd1mm.schooldiary
 
 // Android & System
+
+// Activity & Lifecycle
+
+// Compose Animation
+
+// Compose Foundation & Layout
+// Compose UI & Runtime
+
+// Compose Material 3 & Icons
+
+
+// AndroidX & Utils
+
+// Third Party (Coil, Gson)
+
+// Coroutines & Java/Kotlin Utils
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -13,31 +33,11 @@ import android.net.Uri
 import android.os.Bundle
 import android.provider.OpenableColumns
 import android.util.Base64
-
-// Activity & Lifecycle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-
-// Compose Animation
-import androidx.compose.animation.*
-import androidx.compose.animation.core.*
-
-// Compose Foundation & Layout
-import androidx.compose.foundation.*
-import androidx.compose.foundation.gestures.*
-import androidx.compose.foundation.layout.*
-// Compose UI & Runtime
-import androidx.compose.runtime.*
-import androidx.compose.ui.graphics.*
-import androidx.compose.ui.platform.*
-
-// Compose Material 3 & Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.*
-import androidx.compose.material3.*
-
-
-// AndroidX & Utils
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.ui.graphics.Color
 import androidx.core.content.FileProvider
 import androidx.core.view.WindowCompat
 import androidx.exifinterface.media.ExifInterface
@@ -51,12 +51,8 @@ import com.example.schooldiary.Zinc900
 import com.example.schooldiary.defaultBellSchedule
 import com.example.schooldiary.defaultScheduleData
 import com.example.schooldiary.ui.navigation.AppContent
-
-// Third Party (Coil, Gson)
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-
-// Coroutines & Java/Kotlin Utils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -70,8 +66,6 @@ import java.util.Locale
 import java.util.Scanner
 import java.util.UUID
 import kotlin.math.absoluteValue
-import kotlin.math.roundToInt
-
 
 
 class MainActivity : ComponentActivity() {
@@ -81,7 +75,13 @@ class MainActivity : ComponentActivity() {
         window.navigationBarColor = android.graphics.Color.BLACK
         WindowCompat.setDecorFitsSystemWindows(window, false)
         setContent {
-            MaterialTheme(colorScheme = darkColorScheme(background = BlackBg, surface = Zinc900, onSurface = Color.White)) {
+            MaterialTheme(
+                colorScheme = darkColorScheme(
+                    background = BlackBg,
+                    surface = Zinc900,
+                    onSurface = Color.White
+                )
+            ) {
                 AppContent()
             }
         }
@@ -118,7 +118,10 @@ class MySpaceManager(private val context: Context) {
         val current = getActiveSubjects().toMutableList()
         if (current.remove(subject)) {
             prefs.edit().putString("myspace_subjects", gson.toJson(current)).apply()
-            try { File(rootDir, subject).deleteRecursively() } catch (e: Exception) {}
+            try {
+                File(rootDir, subject).deleteRecursively()
+            } catch (e: Exception) {
+            }
         }
     }
 
@@ -141,11 +144,16 @@ class MySpaceManager(private val context: Context) {
                 FileOutputStream(destFile).use { output -> input.copyTo(output) }
             }
             true
-        } catch (e: Exception) { false }
+        } catch (e: Exception) {
+            false
+        }
     }
 
     fun deleteFile(path: String) {
-        try { File(path).delete() } catch (e: Exception) { }
+        try {
+            File(path).delete()
+        } catch (e: Exception) {
+        }
     }
 
     fun saveSubjectsOrder(subjects: List<String>) {
@@ -175,7 +183,7 @@ class MySpaceManager(private val context: Context) {
             cursor.use {
                 if (it != null && it.moveToFirst()) {
                     val index = it.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-                    if(index != -1) result = it.getString(index)
+                    if (index != -1) result = it.getString(index)
                 }
             }
         }
@@ -193,8 +201,12 @@ class BellManager(context: Context) {
     private val gson = Gson()
     fun getBells(): List<BellTime> {
         val json = prefs.getString("bell_data", null)
-        return if (json != null) gson.fromJson(json, object : TypeToken<List<BellTime>>() {}.type) else defaultBellSchedule
+        return if (json != null) gson.fromJson(
+            json,
+            object : TypeToken<List<BellTime>>() {}.type
+        ) else defaultBellSchedule
     }
+
     fun saveBells(bells: List<BellTime>) {
         prefs.edit().putString("bell_data", gson.toJson(bells)).apply()
     }
@@ -205,11 +217,16 @@ class ScheduleManager(context: Context) {
     private val gson = Gson()
     fun getSchedule(): Map<String, List<Lesson>> {
         val json = prefs.getString("schedule_data", null)
-        return if (json != null) gson.fromJson(json, object : TypeToken<Map<String, List<Lesson>>>() {}.type) else defaultScheduleData
+        return if (json != null) gson.fromJson(
+            json,
+            object : TypeToken<Map<String, List<Lesson>>>() {}.type
+        ) else defaultScheduleData
     }
+
     fun saveSchedule(schedule: Map<String, List<Lesson>>) {
         prefs.edit().putString("schedule_data", gson.toJson(schedule)).apply()
     }
+
     fun getUniqueSubjects(schedule: Map<String, List<Lesson>>): List<Lesson> {
         val collator = Collator.getInstance(Locale("uk", "UA"))
         return schedule.values.flatten()
@@ -227,17 +244,22 @@ class HomeworkManager(context: Context) {
         try {
             val json = prefs.getString("hw_data", null) ?: return@withContext emptyList()
             gson.fromJson(json, object : TypeToken<List<Homework>>() {}.type)
-        } catch (e: Exception) { emptyList() }
+        } catch (e: Exception) {
+            emptyList()
+        }
     }
+
     fun getHomeworkList(): List<Homework> {
         val json = prefs.getString("hw_data", null) ?: return emptyList()
         return gson.fromJson(json, object : TypeToken<List<Homework>>() {}.type)
     }
+
     fun saveHomework(hw: Homework) {
         val list = getHomeworkList().toMutableList()
         list.add(hw)
         prefs.edit().putString("hw_data", gson.toJson(list)).apply()
     }
+
     fun updateHomework(updatedHw: Homework) {
         val list = getHomeworkList().toMutableList()
         val index = list.indexOfFirst { it.id == updatedHw.id }
@@ -246,13 +268,24 @@ class HomeworkManager(context: Context) {
             prefs.edit().putString("hw_data", gson.toJson(list)).apply()
         }
     }
+
     fun archiveHomework(id: Long) {
         val list = getHomeworkList().toMutableList()
         val index = list.indexOfFirst { it.id == id }
         if (index != -1) {
             val hw = list[index]
-            hw.imagePaths.forEach { try { File(it).delete() } catch (e: Exception) {} }
-            hw.audioPath?.let { try { File(it).delete() } catch (e: Exception) {} }
+            hw.imagePaths.forEach {
+                try {
+                    File(it).delete()
+                } catch (e: Exception) {
+                }
+            }
+            hw.audioPath?.let {
+                try {
+                    File(it).delete()
+                } catch (e: Exception) {
+                }
+            }
 
             list[index] = hw.copy(
                 isArchived = true,
@@ -266,8 +299,18 @@ class HomeworkManager(context: Context) {
     fun deleteHomeworkComplete(id: Long) {
         val list = getHomeworkList()
         val itemToDelete = list.find { it.id == id }
-        itemToDelete?.imagePaths?.forEach { try { File(it).delete() } catch (e: Exception) {} }
-        itemToDelete?.audioPath?.let { try { File(it).delete() } catch (e: Exception) {} }
+        itemToDelete?.imagePaths?.forEach {
+            try {
+                File(it).delete()
+            } catch (e: Exception) {
+            }
+        }
+        itemToDelete?.audioPath?.let {
+            try {
+                File(it).delete()
+            } catch (e: Exception) {
+            }
+        }
         val newList = list.filter { it.id != id }
         prefs.edit().putString("hw_data", gson.toJson(newList)).apply()
     }
@@ -286,7 +329,13 @@ class SettingsManager(private val context: Context) {
         get() = prefs.getString("groq_api_key", "") ?: ""
         set(value) = prefs.edit().putString("groq_api_key", value).apply()
 
-    fun exportData(incSchedule: Boolean, incBells: Boolean, incSpace: Boolean, incApi: Boolean, incArchived: Boolean): Uri? {
+    fun exportData(
+        incSchedule: Boolean,
+        incBells: Boolean,
+        incSpace: Boolean,
+        incApi: Boolean,
+        incArchived: Boolean
+    ): Uri? {
         try {
             val tempDir = File(context.cacheDir, "export_temp_${System.currentTimeMillis()}")
             tempDir.mkdirs()
@@ -294,13 +343,19 @@ class SettingsManager(private val context: Context) {
             val allData = JSONObject()
 
             if (incSchedule) {
-                allData.put("schedule_raw", prefs.getString("schedule_data", gson.toJson(defaultScheduleData)))
+                allData.put(
+                    "schedule_raw",
+                    prefs.getString("schedule_data", gson.toJson(defaultScheduleData))
+                )
                 val allHw = hwManager.getHomeworkList()
                 val hwToExport = if (incArchived) allHw else allHw.filter { !it.isArchived }
                 allData.put("homework", gson.toJson(hwToExport))
             }
 
-            if (incBells) allData.put("bells_raw", prefs.getString("bell_data", gson.toJson(defaultBellSchedule)))
+            if (incBells) allData.put(
+                "bells_raw",
+                prefs.getString("bell_data", gson.toJson(defaultBellSchedule))
+            )
             if (incSpace) allData.put("myspace_subjects", prefs.getString("myspace_subjects", "[]"))
             if (incApi) allData.put("groq_api_key", prefs.getString("groq_api_key", ""))
 
@@ -344,13 +399,16 @@ class SettingsManager(private val context: Context) {
             ZipUtils.zip(filesToZip, zipFile)
             tempDir.deleteRecursively()
             return FileProvider.getUriForFile(context, "${context.packageName}.provider", zipFile)
-        } catch (e: Exception) { e.printStackTrace(); return null }
+        } catch (e: Exception) {
+            e.printStackTrace(); return null
+        }
     }
 
     fun importData(uri: Uri): Boolean {
         return try {
             val tempZip = File(context.cacheDir, "import_temp.zip")
-            context.contentResolver.openInputStream(uri)?.use { input -> tempZip.outputStream().use { input.copyTo(it) } }
+            context.contentResolver.openInputStream(uri)
+                ?.use { input -> tempZip.outputStream().use { input.copyTo(it) } }
 
             val unzipDir = File(context.cacheDir, "unzipped")
             unzipDir.deleteRecursively()
@@ -363,11 +421,20 @@ class SettingsManager(private val context: Context) {
             val json = JSONObject(jsonFile.readText())
             val editor = prefs.edit()
 
-            if (json.has("schedule_raw")) editor.putString("schedule_data", json.getString("schedule_raw"))
+            if (json.has("schedule_raw")) editor.putString(
+                "schedule_data",
+                json.getString("schedule_raw")
+            )
             if (json.has("homework")) editor.putString("hw_data", json.getString("homework"))
             if (json.has("bells_raw")) editor.putString("bell_data", json.getString("bells_raw"))
-            if (json.has("myspace_subjects")) editor.putString("myspace_subjects", json.getString("myspace_subjects"))
-            if (json.has("groq_api_key")) editor.putString("groq_api_key", json.getString("groq_api_key"))
+            if (json.has("myspace_subjects")) editor.putString(
+                "myspace_subjects",
+                json.getString("myspace_subjects")
+            )
+            if (json.has("groq_api_key")) editor.putString(
+                "groq_api_key",
+                json.getString("groq_api_key")
+            )
             editor.commit()
 
             val hwMediaDir = File(unzipDir, "hw_media")
@@ -383,7 +450,9 @@ class SettingsManager(private val context: Context) {
             unzipDir.deleteRecursively()
             tempZip.delete()
             true
-        } catch (e: Exception) { e.printStackTrace(); false }
+        } catch (e: Exception) {
+            e.printStackTrace(); false
+        }
     }
 }
 
@@ -391,15 +460,16 @@ class SettingsManager(private val context: Context) {
 
 object ZipUtils {
     fun zip(files: List<File>, zipFile: File) {
-        java.util.zip.ZipOutputStream(java.io.BufferedOutputStream(java.io.FileOutputStream(zipFile))).use { out ->
-            files.forEach { file ->
-                if (file.isDirectory) {
-                    zipDirectory(file, file.name, out)
-                } else {
-                    zipFile(file, "", out)
+        java.util.zip.ZipOutputStream(java.io.BufferedOutputStream(FileOutputStream(zipFile)))
+            .use { out ->
+                files.forEach { file ->
+                    if (file.isDirectory) {
+                        zipDirectory(file, file.name, out)
+                    } else {
+                        zipFile(file, "", out)
+                    }
                 }
             }
-        }
     }
 
     private fun zipFile(file: File, parentPath: String, out: java.util.zip.ZipOutputStream) {
@@ -416,19 +486,20 @@ object ZipUtils {
     }
 
     fun unzip(zipFile: File, targetDirectory: File) {
-        java.util.zip.ZipInputStream(java.io.BufferedInputStream(java.io.FileInputStream(zipFile))).use { zis ->
-            var entry = zis.nextEntry
-            while (entry != null) {
-                val newFile = File(targetDirectory, entry.name)
-                if (entry.isDirectory) {
-                    newFile.mkdirs()
-                } else {
-                    newFile.parentFile?.mkdirs()
-                    newFile.outputStream().use { zis.copyTo(it) }
+        java.util.zip.ZipInputStream(java.io.BufferedInputStream(java.io.FileInputStream(zipFile)))
+            .use { zis ->
+                var entry = zis.nextEntry
+                while (entry != null) {
+                    val newFile = File(targetDirectory, entry.name)
+                    if (entry.isDirectory) {
+                        newFile.mkdirs()
+                    } else {
+                        newFile.parentFile?.mkdirs()
+                        newFile.outputStream().use { zis.copyTo(it) }
+                    }
+                    entry = zis.nextEntry
                 }
-                entry = zis.nextEntry
             }
-        }
     }
 }
 
@@ -438,7 +509,10 @@ class AudioRecorder(private val context: Context) {
 
     fun startRecording(): File? {
         outputFile = File(context.cacheDir, "audio_record_${System.currentTimeMillis()}.m4a")
-        recorder = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) MediaRecorder(context) else MediaRecorder()
+        recorder =
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) MediaRecorder(
+                context
+            ) else MediaRecorder()
         recorder?.apply {
             setAudioSource(MediaRecorder.AudioSource.MIC)
             setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
@@ -508,13 +582,15 @@ object SimpleAudioPlayer {
                 mediaPlayer?.stop()
             }
             mediaPlayer?.release()
-        } catch (e: Exception) { }
+        } catch (e: Exception) {
+        }
         mediaPlayer = null
     }
 }
 
 object GeminiClient {
-    private const val URL_TEMPLATE = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=%s"
+    private const val URL_TEMPLATE =
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=%s"
 
     suspend fun transcribeAudio(file: File, apiKey: String): String? = withContext(Dispatchers.IO) {
         if (apiKey.isBlank() || !file.exists() || file.length() == 0L) return@withContext null
@@ -530,15 +606,23 @@ object GeminiClient {
             val base64Audio = Base64.encodeToString(fileBytes, Base64.NO_WRAP)
 
             val jsonBody = JSONObject().apply {
-                put("contents", org.json.JSONArray().put(
-                    JSONObject().put("parts", org.json.JSONArray()
-                        .put(JSONObject().put("text", "Transcribe this audio to text. Output only the transcription."))
-                        .put(JSONObject().put("inline_data", JSONObject().apply {
-                            put("mime_type", "audio/mp4")
-                            put("data", base64Audio)
-                        }))
+                put(
+                    "contents", org.json.JSONArray().put(
+                        JSONObject().put(
+                            "parts", org.json.JSONArray()
+                                .put(
+                                    JSONObject().put(
+                                        "text",
+                                        "Transcribe this audio to text. Output only the transcription."
+                                    )
+                                )
+                                .put(JSONObject().put("inline_data", JSONObject().apply {
+                                    put("mime_type", "audio/mp4")
+                                    put("data", base64Audio)
+                                }))
+                        )
                     )
-                ))
+                )
             }
 
             connection.outputStream.use { os ->
@@ -547,7 +631,8 @@ object GeminiClient {
             }
 
             if (connection.responseCode == 200) {
-                val response = Scanner(connection.inputStream).useDelimiter("\\A").let { if (it.hasNext()) it.next() else "" }
+                val response = Scanner(connection.inputStream).useDelimiter("\\A")
+                    .let { if (it.hasNext()) it.next() else "" }
                 val jsonResponse = JSONObject(response)
                 val text = jsonResponse.getJSONArray("candidates")
                     .getJSONObject(0)
@@ -570,12 +655,15 @@ fun saveImageToInternalStorage(context: Context, uri: Uri): String? {
     return try {
         val bitmap = MediaStoreUtils.getCorrectlyOrientedImage(context, uri) ?: return null
         val scaledBitmap = MediaStoreUtils.scaleBitmap(bitmap, 1920)
-        val file = File(context.filesDir, "img_${System.currentTimeMillis()}_${UUID.randomUUID()}.jpg")
+        val file =
+            File(context.filesDir, "img_${System.currentTimeMillis()}_${UUID.randomUUID()}.jpg")
         val outputStream = FileOutputStream(file)
         scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 85, outputStream)
         outputStream.close()
         file.absolutePath
-    } catch (e: Exception) { null }
+    } catch (e: Exception) {
+        null
+    }
 }
 
 fun getNextLessonDay(subject: String, schedule: Map<String, List<Lesson>>): String {
@@ -613,19 +701,43 @@ fun getNextLessonDate(subject: String, schedule: Map<String, List<Lesson>>): Str
 fun saveAudioToInternalStorage(context: Context, tempFile: File): String? {
     return try {
         if (!tempFile.exists() || tempFile.length() == 0L) return null
-        val destFile = File(context.filesDir, "audio_${System.currentTimeMillis()}_${UUID.randomUUID()}.m4a")
+        val destFile =
+            File(context.filesDir, "audio_${System.currentTimeMillis()}_${UUID.randomUUID()}.m4a")
         tempFile.copyTo(destFile, overwrite = true)
         destFile.absolutePath
-    } catch (e: Exception) { null }
+    } catch (e: Exception) {
+        null
+    }
 }
 
 fun getSubjectThemeColor(subject: String, icon: String): Color {
     val lower = subject.lowercase()
     val hue = when {
         icon in listOf("🎨", "🎭", "💃") || "мистецт" in lower -> 270f
-        icon in listOf("📐", "📏", "🔢") || "алгебра" in lower || "геомет" in lower || "матема" in lower -> 45f
-        icon in listOf("🧪", "🧬", "🦠", "🌱", "⚛️") || "фізика" in lower || "хімія" in lower || "біолог" in lower -> 150f
-        icon in listOf("🇬🇧", "🇺🇸", "🇩🇪", "🗣️", "✍️", "📖", "📚") || "укр" in lower || "мов" in lower || "літ" in lower -> 330f
+        icon in listOf(
+            "📐",
+            "📏",
+            "🔢"
+        ) || "алгебра" in lower || "геомет" in lower || "матема" in lower -> 45f
+
+        icon in listOf(
+            "🧪",
+            "🧬",
+            "🦠",
+            "🌱",
+            "⚛️"
+        ) || "фізика" in lower || "хімія" in lower || "біолог" in lower -> 150f
+
+        icon in listOf(
+            "🇬🇧",
+            "🇺🇸",
+            "🇩🇪",
+            "🗣️",
+            "✍️",
+            "📖",
+            "📚"
+        ) || "укр" in lower || "мов" in lower || "літ" in lower -> 330f
+
         icon in listOf("⚽", "🏀", "🏊", "🤸") || "фізк" in lower || "спорт" in lower -> 25f
         icon in listOf("💻", "🖥️", "🖱️") || "інформ" in lower -> 190f
         icon in listOf("🛡️", "⚔️", "🗺️", "🌎") || "історія" in lower || "право" in lower -> 30f
@@ -640,7 +752,10 @@ object MediaStoreUtils {
         val originalBitmap = BitmapFactory.decodeStream(inputStream); inputStream.close()
         inputStream = context.contentResolver.openInputStream(photoUri) ?: return originalBitmap
         val exifInterface = ExifInterface(inputStream)
-        val orientation = exifInterface.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
+        val orientation = exifInterface.getAttributeInt(
+            ExifInterface.TAG_ORIENTATION,
+            ExifInterface.ORIENTATION_NORMAL
+        )
         inputStream.close()
         val matrix = Matrix()
         when (orientation) {
@@ -648,14 +763,28 @@ object MediaStoreUtils {
             ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f)
             ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f)
         }
-        return Bitmap.createBitmap(originalBitmap, 0, 0, originalBitmap.width, originalBitmap.height, matrix, true)
+        return Bitmap.createBitmap(
+            originalBitmap,
+            0,
+            0,
+            originalBitmap.width,
+            originalBitmap.height,
+            matrix,
+            true
+        )
     }
+
     fun scaleBitmap(bitmap: Bitmap, maxDimension: Int): Bitmap {
-        val originalWidth = bitmap.width; val originalHeight = bitmap.height
-        var newWidth = originalWidth; var newHeight = originalHeight
+        val originalWidth = bitmap.width
+        val originalHeight = bitmap.height
+        var newWidth = originalWidth
+        var newHeight = originalHeight
         if (originalWidth > maxDimension || originalHeight > maxDimension) {
-            if (originalWidth > originalHeight) { newWidth = maxDimension; newHeight = (newWidth * originalHeight) / originalWidth }
-            else { newHeight = maxDimension; newWidth = (newHeight * originalWidth) / originalHeight }
+            if (originalWidth > originalHeight) {
+                newWidth = maxDimension; newHeight = (newWidth * originalHeight) / originalWidth
+            } else {
+                newHeight = maxDimension; newWidth = (newHeight * originalWidth) / originalHeight
+            }
         }
         return Bitmap.createScaledBitmap(bitmap, newWidth, newHeight, true)
     }
