@@ -1,5 +1,6 @@
 package com.example.schooldiary.ui.screens
 
+import android.widget.Toast
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -11,9 +12,11 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -54,9 +57,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -75,7 +82,7 @@ import java.time.LocalDate
 import java.time.YearMonth
 import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun CalendarArchiveScreen(navController: NavController, hwManager: HomeworkManager, lang: String) {
     var yearMonth by remember { mutableStateOf(YearMonth.now()) }
@@ -84,6 +91,11 @@ fun CalendarArchiveScreen(navController: NavController, hwManager: HomeworkManag
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
     var archivedTasks by remember { mutableStateOf<List<Homework>>(emptyList()) }
     var showTasksSheet by remember { mutableStateOf(false) }
+
+    // Инструменты для обратной связи и буфера обмена
+    val clipboardManager = LocalClipboardManager.current
+    val haptic = LocalHapticFeedback.current
+    val context = LocalContext.current
 
     // Завантаження архівних завдань
     LaunchedEffect(Unit) {
@@ -123,9 +135,11 @@ fun CalendarArchiveScreen(navController: NavController, hwManager: HomeworkManag
             contentColor = Color.White,
             dragHandle = { BottomSheetDefaults.DragHandle(color = Zinc700) }
         ) {
-            Column(modifier = Modifier
-                .padding(horizontal = 24.dp)
-                .padding(bottom = 32.dp)) {
+            Column(
+                modifier = Modifier
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = 32.dp)
+            ) {
                 Text(
                     text = "${selectedDate.dayOfMonth}.${selectedDate.monthValue}.${selectedDate.year}",
                     fontSize = 24.sp,
@@ -144,33 +158,52 @@ fun CalendarArchiveScreen(navController: NavController, hwManager: HomeworkManag
                         Text(Tr.get("events_none", lang), color = Zinc500, fontSize = 16.sp)
                     }
                 } else {
-                    LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        items(tasksForSelectedDate) { hw ->
+                    LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(items = tasksForSelectedDate, key = { it.id }) { hw ->
                             Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .combinedClickable(
+                                        onClick = { /* ничего не делаем */ },
+                                        onLongClick = {
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            val textToCopy = "${hw.icon} ${hw.subject}: ${hw.text}"
+                                            clipboardManager.setText(AnnotatedString(textToCopy))
+                                            Toast.makeText(
+                                                context,
+                                                Tr.get("copied", lang),
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
+                                    ),
                                 colors = CardDefaults.cardColors(containerColor = BlackBg),
                                 shape = RoundedCornerShape(16.dp),
                                 border = BorderStroke(1.dp, Zinc800)
                             ) {
                                 Row(
                                     modifier = Modifier.padding(16.dp),
-                                    verticalAlignment = Alignment.CenterVertically
+                                    verticalAlignment = Alignment.Top
                                 ) {
                                     Text(hw.icon, fontSize = 28.sp)
                                     Spacer(modifier = Modifier.width(16.dp))
-                                    Column {
+                                    Column(modifier = Modifier.fillMaxWidth()) {
                                         Text(
-                                            hw.subject,
+                                            text = hw.subject,
                                             fontWeight = FontWeight.Bold,
                                             color = Color.White,
                                             fontSize = 16.sp
                                         )
                                         if (hw.text.isNotEmpty()) {
                                             Text(
-                                                hw.text,
+                                                text = hw.text,
                                                 color = Zinc500,
                                                 fontSize = 13.sp,
-                                                maxLines = 2,
-                                                overflow = TextOverflow.Ellipsis
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(top = 4.dp)
                                             )
                                         }
                                     }
@@ -184,10 +217,12 @@ fun CalendarArchiveScreen(navController: NavController, hwManager: HomeworkManag
     }
 
     // --- ГОЛОВНИЙ ЕКРАН (БЕЗ ТІНЕЙ) ---
-    Box(modifier = Modifier
-        .fillMaxSize()
-        .background(BlackBg)
-        .statusBarsPadding()) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(BlackBg)
+            .statusBarsPadding()
+    ) {
 
         Column(modifier = Modifier.fillMaxSize()) {
 

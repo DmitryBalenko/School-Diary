@@ -10,7 +10,6 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.VectorConverter
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
@@ -22,11 +21,15 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -55,6 +58,8 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -235,52 +240,11 @@ fun ExportCheckboxItem(label: String, checked: Boolean, onChecked: (Boolean) -> 
 }
 
 @Composable
-fun TimeEditField(value: String, onValueChange: (String) -> Unit, label: String) {
-    val digits = value.filter { it.isDigit() }
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = label,
-            color = Zinc500,
-            fontSize = 11.sp,
-            modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
-        )
-        BasicTextField(
-            value = digits,
-            onValueChange = { newRaw ->
-                val filtered = newRaw.filter { it.isDigit() }.take(4)
-                val formatted = if (filtered.length >= 3) {
-                    filtered.substring(0, 2) + ":" + filtered.substring(2)
-                } else {
-                    filtered
-                }
-                onValueChange(formatted)
-            },
-            textStyle = TextStyle(
-                color = Color.White,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.SemiBold,
-                textAlign = TextAlign.Center,
-                letterSpacing = 1.sp
-            ),
-            cursorBrush = SolidColor(BlueAction),
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Zinc800, RoundedCornerShape(10.dp))
-                .padding(vertical = 12.dp, horizontal = 4.dp),
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            visualTransformation = TimeVisualTransformation()
-        )
-    }
-}
-
-// --- ОНОВЛЕНЕ ПОЛЕ ВВОДУ ЧАСУ (DESIGNER EDITION) ---
-@Composable
 fun TimeEditField(
     value: String,
     onValueChange: (String) -> Unit,
     label: String,
-    onFocus: () -> Unit // Callback для повідомлення про фокус
+    onFocus: () -> Unit = {}
 ) {
     val digits = value.filter { it.isDigit() }
 
@@ -314,8 +278,8 @@ fun TimeEditField(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(Zinc800, RoundedCornerShape(10.dp))
-                .padding(vertical = 12.dp, horizontal = 0.dp) // Відступи для комфорту
-                .onFocusChanged { if (it.isFocused) onFocus() }, // ВАЖЛИВО: ловимо фокус тут
+                .padding(vertical = 12.dp, horizontal = 0.dp)
+                .onFocusChanged { if (it.isFocused) onFocus() },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             visualTransformation = TimeVisualTransformation()
@@ -343,7 +307,6 @@ class TimeVisualTransformation : VisualTransformation {
     }
 }
 
-// --- ОКРЕМИЙ КОМПОНЕНТ КАРТКИ ДЗВІНКА ---
 @Composable
 fun BellCardItem(
     index: Int,
@@ -357,13 +320,12 @@ fun BellCardItem(
         shape = RoundedCornerShape(16.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .animateContentSize() // Плавна зміна розміру
+            .animateContentSize()
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Номер уроку
             Text(
                 text = "${index + 1}.",
                 color = Zinc500,
@@ -372,7 +334,6 @@ fun BellCardItem(
                 modifier = Modifier.width(30.dp)
             )
 
-            // Поле початку
             Box(modifier = Modifier.weight(1f)) {
                 TimeEditField(
                     value = bell.start,
@@ -389,7 +350,6 @@ fun BellCardItem(
                 fontWeight = FontWeight.Light
             )
 
-            // Поле кінця
             Box(modifier = Modifier.weight(1f)) {
                 TimeEditField(
                     value = bell.end,
@@ -412,9 +372,7 @@ fun SwipeToRevealCard(
     val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
 
-    // Ширина кнопки (на сколько сдвигается плитка)
     val anchorWidthPx = with(density) { 85.dp.toPx() }
-    // Порог срабатывания "красного" режима
     val triggerThresholdPx = anchorWidthPx * 1.5f
 
     val offset = offsetAnim.value
@@ -428,7 +386,6 @@ fun SwipeToRevealCard(
         }
     }
 
-    // Цвет меняется с серого на красный
     val backgroundColor by animateColorAsState(
         targetValue = if (isPastThreshold || isDeleteConfirmed) Color(0xFFEF4444) else Color(
             0xFF3F3F46
@@ -437,22 +394,16 @@ fun SwipeToRevealCard(
         label = "bgColor"
     )
 
-    // Основной контейнер.
-    // ВАЖНО: Мы НЕ обрезаем его целиком clip(), чтобы кнопка могла иметь свою форму
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(IntrinsicSize.Min)
     ) {
-        // 1. КНОПКА УДАЛЕНИЯ (Слой снизу)
         Box(
             modifier = Modifier
                 .align(Alignment.CenterEnd)
                 .fillMaxHeight()
                 .width(with(density) { revealedWidth.toDp() })
-                // --- ВОТ ЗДЕСЬ НАСТРАИВАЕМ ЗАКРУГЛЕНИЯ ---
-                // Слева (внутренняя часть) - маленькое скругление (4.dp)
-                // Справа (внешняя часть) - большое скругление как у плитки (24.dp)
                 .clip(
                     RoundedCornerShape(
                         topStart = 8.dp,
@@ -475,11 +426,9 @@ fun SwipeToRevealCard(
             }
         }
 
-        // 2. КОНТЕНТ ПЛИТКИ (Слой сверху)
         Box(
             modifier = Modifier
                 .offset { IntOffset(offset.roundToInt(), 0) }
-                // Скругляем саму плитку, чтобы она была красивой
                 .clip(RoundedCornerShape(24.dp))
                 .draggable(
                     orientation = Orientation.Horizontal,
@@ -493,14 +442,12 @@ fun SwipeToRevealCard(
                     },
                     onDragStopped = {
                         if (offsetAnim.value <= -triggerThresholdPx) {
-                            // Фиксируем удаление
                             isDeleteConfirmed = true
                             offsetAnim.animateTo(
                                 -anchorWidthPx,
                                 tween(300, easing = FastOutSlowInEasing)
                             )
                         } else {
-                            // Если не дотянули - прячем обратно
                             isDeleteConfirmed = false
                             offsetAnim.animateTo(0f, tween(300, easing = FastOutSlowInEasing))
                         }
@@ -688,39 +635,39 @@ fun TelegramAudioPlayer(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @SuppressLint("UnusedBoxWithConstraintsScope")
 @Composable
 fun ImageViewer(
-    imagePath: String,
+    imagePaths: List<String>,
+    initialIndex: Int,
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
-
     val buttonBackground = Color(0xFF27272A).copy(alpha = 0.5f)
 
-    // Анимационные стейты
-    val scale = remember { Animatable(1f) }
-    // ВАЖНО: Используем VectorConverter для Offset
-    val offset = remember { Animatable(Offset.Zero, Offset.VectorConverter) }
+    val pagerState = rememberPagerState(initialPage = initialIndex) { imagePaths.size }
 
     val shareImage = {
         try {
-            val file = File(imagePath)
-            if (file.exists()) {
-                val uri = FileProvider.getUriForFile(
-                    context,
-                    "${context.packageName}.provider",
-                    file
-                )
-                val intent = Intent(Intent.ACTION_SEND).apply {
-                    type = "image/*"
-                    putExtra(Intent.EXTRA_STREAM, uri)
-                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            val currentPath = imagePaths.getOrNull(pagerState.currentPage)
+            if (currentPath != null) {
+                val file = File(currentPath)
+                if (file.exists()) {
+                    val uri = FileProvider.getUriForFile(
+                        context,
+                        "${context.packageName}.provider",
+                        file
+                    )
+                    val intent = Intent(Intent.ACTION_SEND).apply {
+                        type = "image/*"
+                        putExtra(Intent.EXTRA_STREAM, uri)
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                    context.startActivity(Intent.createChooser(intent, "Поделиться фото"))
+                } else {
+                    Toast.makeText(context, "Файл не найден", Toast.LENGTH_SHORT).show()
                 }
-                context.startActivity(Intent.createChooser(intent, "Поделиться фото"))
-            } else {
-                Toast.makeText(context, "Файл не найден", Toast.LENGTH_SHORT).show()
             }
         } catch (e: Exception) {
             Toast.makeText(context, "Ошибка при отправке", Toast.LENGTH_SHORT).show()
@@ -739,57 +686,96 @@ fun ImageViewer(
                 .fillMaxSize()
                 .background(Color.Black)
         ) {
-            // 1. Объявляем переменные размеров ПРЯМО ЗДЕСЬ
             val screenWidth = constraints.maxWidth.toFloat()
             val screenHeight = constraints.maxHeight.toFloat()
 
-            AsyncImage(
-                model = ImageRequest.Builder(context)
-                    .data(File(imagePath))
-                    .build(),
-                contentDescription = null,
-                contentScale = ContentScale.Fit,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .pointerInput(Unit) {
-                        detectTransformGestures { _, pan, zoom, _ ->
-                            coroutineScope.launch {
-                                // 2. Логика расчета
-                                val newScale = (scale.value * zoom).coerceIn(1f, 4f)
-                                scale.snapTo(newScale)
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxSize()
+            ) { page ->
+                val imagePath = imagePaths[page]
 
-                                // Считаем границы
-                                val maxX = (screenWidth * (newScale - 1)) / 2
-                                val maxY = (screenHeight * (newScale - 1)) / 2
+                val scale = remember { mutableStateOf(1f) }
+                val offset = remember { mutableStateOf(Offset.Zero) }
 
-                                val newOffset = offset.value + pan
+                // Сброс масштаба при перелистывании
+                LaunchedEffect(pagerState.currentPage) {
+                    if (page != pagerState.currentPage) {
+                        scale.value = 1f
+                        offset.value = Offset.Zero
+                    }
+                }
 
-                                // Применяем ограничения
-                                offset.snapTo(
-                                    Offset(
-                                        x = newOffset.x.coerceIn(-maxX, maxX),
-                                        y = newOffset.y.coerceIn(-maxY, maxY)
-                                    )
-                                )
+                AsyncImage(
+                    model = ImageRequest.Builder(context)
+                        .data(File(imagePath))
+                        .build(),
+                    contentDescription = null,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .pointerInput(Unit) {
+                            awaitEachGesture {
+                                awaitFirstDown()
+                                do {
+                                    val event = awaitPointerEvent()
+                                    val zoom = event.calculateZoom()
+                                    val pan = event.calculatePan()
+
+                                    // Если пальцев > 1 (щипок) ИЛИ картинка уже увеличена: перехватываем жесты
+                                    if (event.changes.size > 1 || scale.value > 1.01f) {
+                                        scale.value = (scale.value * zoom).coerceIn(1f, 4f)
+
+                                        if (scale.value > 1.01f) {
+                                            val maxX = (screenWidth * (scale.value - 1)) / 2
+                                            val maxY = (screenHeight * (scale.value - 1)) / 2
+                                            val newX =
+                                                (offset.value.x + pan.x).coerceIn(-maxX, maxX)
+                                            val newY =
+                                                (offset.value.y + pan.y).coerceIn(-maxY, maxY)
+                                            offset.value = Offset(newX, newY)
+                                        } else {
+                                            offset.value = Offset.Zero
+                                        }
+
+                                        // "Съедаем" жест, чтобы Pager не получил его и не скроллился
+                                        event.changes.forEach { it.consume() }
+                                    }
+                                } while (event.changes.any { it.pressed })
                             }
                         }
-                    }
-                    .graphicsLayer {
-                        scaleX = scale.value
-                        scaleY = scale.value
-                        translationX = offset.value.x
-                        translationY = offset.value.y
-                    }
-            )
+                        .graphicsLayer {
+                            scaleX = scale.value
+                            scaleY = scale.value
+                            translationX = offset.value.x
+                            translationY = offset.value.y
+                        }
+                )
+            }
 
-            // Кнопки
+            // Верхние элементы управления (Счетчик, Поделиться, Закрыть)
             Row(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .systemBarsPadding()
                     .padding(top = 16.dp, end = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
+                if (imagePaths.size > 1) {
+                    Box(
+                        modifier = Modifier
+                            .background(buttonBackground, CircleShape)
+                            .padding(horizontal = 12.dp, vertical = 8.dp)
+                    ) {
+                        Text(
+                            text = "${pagerState.currentPage + 1} / ${imagePaths.size}",
+                            color = Color.White,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
                 IconButton(
                     onClick = shareImage,
                     modifier = Modifier.background(buttonBackground, CircleShape)

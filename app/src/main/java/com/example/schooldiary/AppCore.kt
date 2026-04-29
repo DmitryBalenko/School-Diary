@@ -78,16 +78,21 @@ object Tr {
             "recorded_on" to "На:",
             "lessons_and_bells" to "Уроки та дзвінки",
             "press_plus" to "Натисни + щоб додати",
+            "uncompleted_hw" to "Є невиконане завдання.",
+            "transfer_q" to "Перенести?",
+            "overdue_transfer" to "️Прострочено. Перенести на",
             "MONDAY" to "Понеділок",
             "TUESDAY" to "Вівторок",
             "WEDNESDAY" to "Середа",
             "THURSDAY" to "Четвер",
             "FRIDAY" to "П'ятниця"
-        ),
-        "ru" to mapOf(
+        ), "ru" to mapOf(
             "app_name" to "Мой Дневник",
             "hello" to "ПРИВЕТ, УЧЕНИК!",
             "what_to_do" to "Что будем делать?",
+            "uncompleted_hw" to "Есть невыполненное задание.",
+            "transfer_q" to "Перенести?",
+            "overdue_transfer" to "Просрочено. Перенести на",
             "write_hw" to "Записать ДЗ",
             "add_new_task" to "Добавить новое задание",
             "view_hw" to "Посмотреть ДЗ",
@@ -161,13 +166,15 @@ object Tr {
             "WEDNESDAY" to "Среда",
             "THURSDAY" to "Четверг",
             "FRIDAY" to "Пятница"
-        ),
-        "en" to mapOf(
+        ), "en" to mapOf(
             "app_name" to "My Diary",
             "hello" to "HELLO, STUDENT!",
             "what_to_do" to "What shall we do?",
             "write_hw" to "Write HW",
             "add_new_task" to "Add a new task",
+            "uncompleted_hw" to "Undone task.",
+            "transfer_q" to "Transfer?",
+            "overdue_transfer" to "Overdue. Move to",
             "view_hw" to "View HW",
             "active_tasks" to "Active:",
             "my_space" to "My Space",
@@ -262,10 +269,38 @@ val BlueCalendar = Color(0xFF4a90e2)
 
 // --- НАБІР ЕМОДЗІ ---
 val availableEmojis = listOf(
-    "📚", "📐", "🧪", "🇬🇧", "🎨", "🤸", "⚛️", "🗣️",
-    "✍️", "🌎", "🌱", "🛡️", "💰", "🗺️", "💻", "📖",
-    "📏", "🎼", "⚽", "🏊", "💃", "🧠", "🔨", "🍳",
-    "🩺", "⚖️", "🎭", "🎬", "🎤", "🦠", "🧬", "🔭"
+    "📚",
+    "📐",
+    "🧪",
+    "🇬🇧",
+    "🎨",
+    "🤸",
+    "⚛️",
+    "🗣️",
+    "✍️",
+    "🌎",
+    "🌱",
+    "🛡️",
+    "💰",
+    "🗺️",
+    "💻",
+    "📖",
+    "📏",
+    "🎼",
+    "⚽",
+    "🏊",
+    "💃",
+    "🧠",
+    "🔨",
+    "🍳",
+    "🩺",
+    "⚖️",
+    "🎭",
+    "🎬",
+    "🎤",
+    "🦠",
+    "🧬",
+    "🔭"
 )
 
 // --- МОДЕЛІ ---
@@ -298,55 +333,20 @@ data class BellTime(val id: Int, var start: String, var end: String)
 val daysOrder = listOf("MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY")
 
 val defaultBellSchedule = listOf(
-    BellTime(1, "08:30", "09:00"), BellTime(2, "09:05", "09:35"), BellTime(3, "09:40", "10:10"),
-    BellTime(4, "10:20", "10:50"), BellTime(5, "11:00", "11:30"), BellTime(6, "11:35", "12:05"),
-    BellTime(7, "12:10", "12:40"), BellTime(8, "12:45", "13:15")
+    BellTime(1, "08:30", "09:00"),
+    BellTime(2, "09:05", "09:35"),
+    BellTime(3, "09:40", "10:10"),
+    BellTime(4, "10:20", "10:50"),
+    BellTime(5, "11:00", "11:30"),
+    BellTime(6, "11:35", "12:05"),
+    BellTime(7, "12:10", "12:40"),
+    BellTime(8, "12:45", "13:15")
 )
 
 val defaultScheduleData = mapOf(
-    "MONDAY" to listOf(
-        Lesson("8:30", "9:00", "Укр. літ.", "216", "📚"),
-        Lesson("9:05", "9:35", "Мистецтво", "207", "🎨"),
-        Lesson("9:40", "10:10", "Алгебра", "218", "📐"),
-        Lesson("10:20", "10:50", "Хімія", "315", "🧪"),
-        Lesson("11:00", "11:30", "Фізкультура", "216", "🤸"),
-        Lesson("11:35", "12:05", "Фізика", "316", "⚛️"),
-        Lesson("12:10", "12:40", "Гром. освіта", "311", "🗣️"),
-        Lesson("12:45", "13:15", "Англ. мова (Спец)", "", "🇬🇧")
-    ),
-    "TUESDAY" to listOf(
-        Lesson("8:30", "9:00", "Англ. мова", "105/312", "🇬🇧"),
-        Lesson("9:05", "9:35", "Англ. мова", "105/312", "🇬🇧"),
-        Lesson("9:40", "10:10", "Геометрія", "218", "📏"),
-        Lesson("10:20", "10:50", "Історія України", "320", "🛡️"),
-        Lesson("11:00", "11:30", "Фізика", "318", "⚛️"),
-        Lesson("11:35", "12:05", "Фінансова грам.", "313", "💰"),
-        Lesson("12:10", "12:40", "Фізкультура", "", "🤸"),
-        Lesson("12:45", "13:15", "Англ. мова (Спец)", "", "🇬🇧")
-    ),
-    "WEDNESDAY" to listOf(
-        Lesson("8:30", "9:00", "Укр. мова", "216", "✍️"),
-        Lesson("9:05", "9:35", "Географія", "216", "🌎"),
-        Lesson("9:40", "10:10", "Англ. мова", "105/312", "🇬🇧"),
-        Lesson("10:20", "10:50", "Біологія", "112", "🌱"),
-        Lesson("11:00", "11:30", "Історія України", "320", "🛡️"),
-        Lesson("11:35", "12:05", "Алгебра", "218", "📐")
-    ),
-    "THURSDAY" to listOf(
-        Lesson("8:30", "9:00", "Фізика", "318", "⚛️"),
-        Lesson("9:05", "9:35", "Укр. мова", "218", "✍️"),
-        Lesson("9:40", "10:10", "Укр. літ.", "216", "📚"),
-        Lesson("10:20", "10:50", "Всесвітня історія", "320", "🗺️"),
-        Lesson("11:00", "11:30", "Інформатика", "221/317", "💻"),
-        Lesson("11:35", "12:05", "Хімія", "315", "🧪"),
-        Lesson("12:10", "12:40", "Англ. мова", "105/312", "🇬🇧")
-    ),
-    "FRIDAY" to listOf(
-        Lesson("8:30", "9:00", "Біологія", "319", "🌱"),
-        Lesson("9:05", "9:35", "Заруб. літ.", "219", "📖"),
-        Lesson("9:40", "10:10", "Англ. мова", "105/312", "🇬🇧"),
-        Lesson("10:20", "10:50", "Фізкультура", "", "🤸"),
-        Lesson("11:00", "11:30", "Громадська освіта", "309", "🗣️"),
-        Lesson("11:35", "12:05", "Геометрія", "218", "📏")
-    )
+    "MONDAY" to emptyList<Lesson>(),
+    "TUESDAY" to emptyList<Lesson>(),
+    "WEDNESDAY" to emptyList<Lesson>(),
+    "THURSDAY" to emptyList<Lesson>(),
+    "FRIDAY" to emptyList<Lesson>()
 )

@@ -116,26 +116,20 @@ fun MySpaceScreen(
     scheduleManager: ScheduleManager,
     lang: String
 ) {
-    // --- ДАННЫЕ И СОСТОЯНИЕ ---
-    // Основной список предметов
     val subjects =
         remember { mutableStateListOf<String>().apply { addAll(mySpaceManager.getActiveSubjects()) } }
 
-    // Список ID предметов, которые сейчас анимируются на удаление (чтобы сделать красивое "схлопывание")
     val itemsPendingRemoval = remember { mutableStateListOf<String>() }
 
-    // UI состояния для диалогов
     var showAddDialog by remember { mutableStateOf(false) }
     var subjectPendingDelete by remember { mutableStateOf<String?>(null) }
 
-    // Храним действие "сброса свайпа", чтобы закрыть красную кнопку "Delete" при отмене
     var activeResetAction by remember { mutableStateOf<(() -> Unit)?>(null) }
 
     val scope = rememberCoroutineScope()
     val allLessons = remember { scheduleManager.getSchedule().values.flatten() }
     val haptic = LocalHapticFeedback.current
 
-    // --- НАСТРОЙКА DRAG-AND-DROP ---
     val state = rememberReorderableLazyListState(onMove = { from, to ->
         subjects.apply {
             add(to.index, removeAt(from.index))
@@ -150,9 +144,6 @@ fun MySpaceScreen(
             .background(BlackBg)
             .statusBarsPadding()
     ) {
-        // =========================================================================
-        // 1. СПИСОК (Слой 0)
-        // =========================================================================
         if (subjects.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(Tr.get("empty_space", lang), color = Color.Gray, fontSize = 18.sp)
@@ -160,7 +151,6 @@ fun MySpaceScreen(
         } else {
             LazyColumn(
                 state = state.listState,
-                // Отступы сверху под Header (110dp) и снизу (100dp)
                 contentPadding = PaddingValues(
                     top = 110.dp,
                     bottom = 100.dp,
@@ -176,14 +166,11 @@ fun MySpaceScreen(
                 items(items = subjects, key = { it }) { subject ->
                     ReorderableItem(state, key = subject) { isDragging ->
 
-                        // --- ЛОГИКА АНИМИРОВАННОГО УДАЛЕНИЯ ---
-                        // Если предмет попал в список "на удаление", переключаем флаг видимости
                         val isBeingRemoved = itemsPendingRemoval.contains(subject)
                         val visibilityState = remember { MutableTransitionState(true) }.apply {
                             targetState = !isBeingRemoved
                         }
 
-                        // Когда анимация исчезновения закончилась - удаляем реально из списка и БД
                         if (!visibilityState.targetState && visibilityState.isIdle) {
                             LaunchedEffect(subject) {
                                 mySpaceManager.removeSubject(subject)
@@ -192,7 +179,6 @@ fun MySpaceScreen(
                             }
                         }
 
-                        // --- ВИЗУАЛЬНЫЕ ЭФФЕКТЫ ---
                         val elevation by animateDpAsState(
                             if (isDragging) 16.dp else 0.dp,
                             label = "shadow"
@@ -201,21 +187,17 @@ fun MySpaceScreen(
                             if (isDragging) 1.05f else 1f,
                             label = "scale"
                         )
-                        // zIndex при перетаскивании делаем меньше, чем у диалогов (100+), но выше списка (0)
                         val zIndex = if (isDragging) 50f else 0f
 
                         val iconStr = allLessons.find { it.subject == subject }?.icon ?: "📁"
                         val revealState = remember { Animatable(0f) }
 
-                        // Вибрация при начале перетаскивания
                         LaunchedEffect(isDragging) {
                             if (isDragging) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         }
 
-                        // --- ОТОБРАЖЕНИЕ ЭЛЕМЕНТА ---
                         AnimatedVisibility(
                             visibleState = visibilityState,
-                            // Схлопывание по высоте + исчезновение
                             exit = shrinkVertically(animationSpec = tween(300)) + fadeOut(
                                 animationSpec = tween(300)
                             ),
@@ -261,30 +243,25 @@ fun MySpaceScreen(
             }
         }
 
-        // =========================================================================
-        // 2. ВЕРХНЯЯ ПАНЕЛЬ / HEADER (Слой 60)
-        // =========================================================================
-        // Градиентный фон под заголовком
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(120.dp) // Однакова висота
+                .height(120.dp)
                 .align(Alignment.TopCenter)
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(
-                            BlackBg,                    // Повністю чорний
-                            BlackBg,                    // Чорний
-                            BlackBg.copy(alpha = 0.9f), // Поступово прозоріший
+                            BlackBg,
+                            BlackBg,
+                            BlackBg.copy(alpha = 0.9f),
                             BlackBg.copy(alpha = 0.6f),
                             BlackBg.copy(alpha = 0.3f),
-                            Color.Transparent           // Вихід у нуль
+                            Color.Transparent
                         )
                     )
                 )
         )
 
-        // Текст заголовка и кнопка
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -310,9 +287,6 @@ fun MySpaceScreen(
             }
         }
 
-        // =========================================================================
-        // 3. ДИАЛОГ ДОБАВЛЕНИЯ ПРЕДМЕТА
-        // =========================================================================
         if (showAddDialog) {
             AddSubjectDialog(
                 scheduleManager = scheduleManager,
@@ -327,11 +301,6 @@ fun MySpaceScreen(
             )
         }
 
-        // =========================================================================
-        // 4. ПОДТВЕРЖДЕНИЕ УДАЛЕНИЯ (Слой 100+)
-        // =========================================================================
-
-        // Анимация затемнения фона (Dimming)
         AnimatedVisibility(
             visible = subjectPendingDelete != null,
             enter = fadeIn(animationSpec = tween(440)),
@@ -344,10 +313,9 @@ fun MySpaceScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(Color.Black.copy(alpha = 0.7f))
-                    // Обработка клика по фону для закрытия
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
-                        indication = null // Без ripple-эффекта
+                        indication = null
                     ) {
                         subjectPendingDelete = null
                         activeResetAction?.invoke()
@@ -355,7 +323,6 @@ fun MySpaceScreen(
             )
         }
 
-        // Анимация выезда самой карточки снизу (Slide Up)
         AnimatedVisibility(
             visible = subjectPendingDelete != null,
             enter = slideInVertically(initialOffsetY = { it }, animationSpec = tween(300)) + fadeIn(
@@ -386,7 +353,6 @@ fun MySpaceScreen(
                     Spacer(modifier = Modifier.height(24.dp))
 
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        // Кнопка ОТМЕНА
                         Button(
                             onClick = {
                                 subjectPendingDelete = null
@@ -398,15 +364,10 @@ fun MySpaceScreen(
                             Text(Tr.get("cancel", lang), color = Color.White)
                         }
 
-                        // Кнопка УДАЛИТЬ
                         Button(
                             onClick = {
-                                // Вместо мгновенного удаления добавляем в список "на выбывание",
-                                // чтобы сработала анимация схлопывания в списке
                                 val itemToDelete = subjectPendingDelete!!
                                 itemsPendingRemoval.add(itemToDelete)
-
-                                // Закрываем диалог
                                 subjectPendingDelete = null
                                 activeResetAction?.invoke()
                             },
@@ -431,7 +392,7 @@ fun SubjectSpaceScreen(
 ) {
     var files by remember { mutableStateOf(mySpaceManager.getFilesForSubject(subjectName)) }
     val context = LocalContext.current
-    var viewingImage by remember { mutableStateOf<String?>(null) }
+    var viewingImages by remember { mutableStateOf<Pair<List<String>, Int>?>(null) }
     var playingAudioId by remember { mutableStateOf<String?>(null) }
     var fileToDelete by remember { mutableStateOf<SpaceFile?>(null) }
 
@@ -460,7 +421,12 @@ fun SubjectSpaceScreen(
 
     fun openFile(file: SpaceFile) {
         when (file.type) {
-            FileType.IMAGE -> viewingImage = file.path
+            FileType.IMAGE -> {
+                val imageFiles = files.filter { it.type == FileType.IMAGE }.map { it.path }
+                val index = imageFiles.indexOf(file.path).takeIf { it >= 0 } ?: 0
+                viewingImages = Pair(imageFiles, index)
+            }
+
             FileType.AUDIO -> {
                 if (playingAudioId == file.path) {
                     SimpleAudioPlayer.stop(); playingAudioId = null
@@ -510,10 +476,12 @@ fun SubjectSpaceScreen(
 
     DisposableEffect(Unit) { onDispose { SimpleAudioPlayer.stop() } }
 
-    Box(modifier = Modifier
-        .fillMaxSize()
-        .background(BlackBg)
-        .statusBarsPadding()) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(BlackBg)
+            .statusBarsPadding()
+    ) {
         Column(modifier = Modifier.fillMaxSize()) {
             SimpleHeader(navController, subjectName)
             if (files.isEmpty()) {
@@ -608,8 +576,8 @@ fun SubjectSpaceScreen(
             contentColor = Color.White,
             shape = CircleShape
         ) { Icon(Icons.Default.Add, "Upload") }
-        if (viewingImage != null) {
-            ImageViewer(viewingImage!!) { viewingImage = null }
+        if (viewingImages != null) {
+            ImageViewer(viewingImages!!.first, viewingImages!!.second) { viewingImages = null }
         }
         if (fileToDelete != null) {
             AlertDialog(

@@ -13,12 +13,14 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -40,6 +42,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -59,6 +62,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -104,14 +108,34 @@ import com.example.schooldiary.Tr
 import com.example.schooldiary.Zinc500
 import com.example.schooldiary.Zinc800
 import com.example.schooldiary.Zinc900
+import com.example.schooldiary.getNextLessonDate
+import com.example.schooldiary.getNextLessonDay
 import com.example.schooldiary.ui.components.AsyncImagePreview
 import com.example.schooldiary.ui.components.ImageViewer
 import com.example.schooldiary.ui.components.TelegramAudioPlayer
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
+import java.time.LocalDate
+import java.time.LocalTime
 import kotlin.math.absoluteValue
 import kotlin.math.roundToInt
+
+private fun isOverdue(hw: Homework): Boolean {
+    if (hw.isArchived) return false
+    val tDateStr = hw.targetDate ?: return false
+    return try {
+        val tDate = LocalDate.parse(tDateStr)
+        val today = LocalDate.now()
+
+        if (tDate.isBefore(today)) return true
+        if (tDate.isEqual(today) && LocalTime.now().hour >= 16) return true
+
+        false
+    } catch (e: Exception) {
+        false
+    }
+}
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -128,7 +152,6 @@ fun UnifiedHomeworkScreen(
     val context = LocalContext.current
     val density = LocalDensity.current
 
-    // --- ВІБРАЦІЯ ---
     val vibrator = remember {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val vibratorManager =
@@ -140,8 +163,6 @@ fun UnifiedHomeworkScreen(
         }
     }
 
-
-    // --- АНІМАЦІЯ СВАЙПУ ---
     val offsetX = remember { Animatable(0f) }
     val screenWidthPx = context.resources.displayMetrics.widthPixels.toFloat()
     val triggerThreshold = -screenWidthPx * 0.22f
@@ -177,12 +198,27 @@ fun UnifiedHomeworkScreen(
         hwList.addAll(hwManager.getHomeworkListAsync())
     }
 
-    Box(modifier = Modifier
-        .fillMaxSize()
-        .background(BlackBg)
-        .statusBarsPadding()) {
+    val onTransferHw = { hw: Homework ->
+        scope.launch {
+            val newDate = getNextLessonDate(hw.subject, currentSchedule)
+            val newDay = getNextLessonDay(hw.subject, currentSchedule)
+            val updatedHw = hw.copy(targetDate = newDate, targetDay = newDay)
 
-        // --- ШАР 0: ПІГУЛКА (БЕЗ ЗМІН) ---
+            hwManager.updateHomework(updatedHw)
+            val idx = hwList.indexOfFirst { it.id == hw.id }
+            if (idx != -1) {
+                hwList[idx] = updatedHw
+            }
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(BlackBg)
+            .statusBarsPadding()
+    ) {
+
         if (offsetX.value < 0) {
             val pullDistance = offsetX.value.absoluteValue
             val arrowRotation by animateFloatAsState(if (isPastThreshold) 180f else 0f)
@@ -223,7 +259,6 @@ fun UnifiedHomeworkScreen(
             }
         }
 
-        // --- ШАР 1: РУХОМИЙ КОНТЕНТ (З МОРФІНГОМ) ---
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -271,52 +306,46 @@ fun UnifiedHomeworkScreen(
             ) { mode ->
                 if (mode == ViewMode.WEEK)
                     WeekViewContent(
-                        hwList,
-                        currentSchedule,
-                        bells,
-                        settingsManager,
-                        lang,
+                        hwList = hwList,
+                        currentSchedule = currentSchedule,
+                        bells = bells,
+                        settingsManager = settingsManager,
+                        lang = lang,
                         topPadding = 100.dp,
-                        bottomPadding = 40.dp
+                        bottomPadding = 40.dp,
+                        onTransfer = { onTransferHw(it) }
                     )
                 else
                     ListViewContent(
-                        hwList,
-                        settingsManager,
-                        lang,
+                        hwList = hwList,
+                        currentSchedule = currentSchedule,
+                        settingsManager = settingsManager,
+                        lang = lang,
                         topPadding = 100.dp,
-                        bottomPadding = 40.dp
+                        bottomPadding = 40.dp,
+                        onTransfer = { onTransferHw(it) }
                     )
             }
         }
 
-        // --- ШАР 2: ТІНЬ ТА ХЕДЕР (З МОРФІНГОМ ЗАГОЛОВКА) ---
-
-        // Верхній градієнт
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(120.dp) // Однакова висота
+                .height(120.dp)
                 .align(Alignment.TopCenter)
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(
-                            BlackBg,                    // Повністю чорний
-                            BlackBg,                    // Чорний
-                            BlackBg.copy(alpha = 0.98f),   // Дуже густий
-                            BlackBg.copy(alpha = 0.89f),   // Поступовий початок згасання
-                            BlackBg.copy(alpha = 0.8f),    // М'який перехід
-                            BlackBg.copy(alpha = 0.65f),   // Середина
-                            BlackBg.copy(alpha = 0.45f),   // Стає легшим
-                            BlackBg.copy(alpha = 0.25f),   // Напівпрозорий
-                            BlackBg.copy(alpha = 0.15f),    // Ледь помітний серпанок
-                            Color.Transparent           // Вихід у нуль
+                            BlackBg, BlackBg, BlackBg.copy(alpha = 0.98f),
+                            BlackBg.copy(alpha = 0.89f), BlackBg.copy(alpha = 0.8f),
+                            BlackBg.copy(alpha = 0.65f), BlackBg.copy(alpha = 0.45f),
+                            BlackBg.copy(alpha = 0.25f), BlackBg.copy(alpha = 0.15f),
+                            Color.Transparent
                         )
                     )
                 )
         )
 
-        // Хедер
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -330,7 +359,6 @@ fun UnifiedHomeworkScreen(
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Color.White)
             }
 
-            // МОРФІНГ ЗАГОЛОВКА
             AnimatedContent(
                 targetState = viewMode,
                 transitionSpec = {
@@ -353,7 +381,6 @@ fun UnifiedHomeworkScreen(
                 )
             }
 
-            // МОРФІНГ ІКОНКИ В КНОПЦІ
             IconButton(
                 onClick = {
                     viewMode = if (viewMode == ViewMode.WEEK) ViewMode.LIST else ViewMode.WEEK
@@ -381,9 +408,7 @@ fun UnifiedHomeworkScreen(
     }
 }
 
-enum class ViewMode {
-    WEEK, LIST
-}
+enum class ViewMode { WEEK, LIST }
 
 @Composable
 fun WeekViewContent(
@@ -393,31 +418,24 @@ fun WeekViewContent(
     settingsManager: SettingsManager,
     lang: String,
     topPadding: androidx.compose.ui.unit.Dp,
-    bottomPadding: androidx.compose.ui.unit.Dp
+    bottomPadding: androidx.compose.ui.unit.Dp,
+    onTransfer: (Homework) -> Unit
 ) {
     val daysKeys = listOf("MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY")
 
-    // Smart Focus Logic (вычисляется 1 раз при создании экрана)
     val (targetIndex, todayIndex, isAfter16) = remember {
         val now = java.time.LocalDateTime.now()
         val currentDay = now.dayOfWeek.name
         val currentHour = now.hour
 
-        val todayIdx = daysKeys.indexOf(currentDay) // Будет -1 для выходных
+        val todayIdx = daysKeys.indexOf(currentDay)
 
         val targetIdx = when (currentDay) {
-            "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY" -> {
-                if (currentHour < 16) todayIdx else todayIdx + 1
-            }
-
-            "FRIDAY" -> {
-                if (currentHour < 16) todayIdx else 0 // Пт после 16:00 -> Пн
-            }
-
-            "SATURDAY", "SUNDAY" -> 0 // Выходные -> Пн
+            "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY" -> if (currentHour < 16) todayIdx else todayIdx + 1
+            "FRIDAY" -> if (currentHour < 16) todayIdx else 0
+            "SATURDAY", "SUNDAY" -> 0
             else -> 0
         }
-        // Возвращаем целевой индекс, индекс текущего дня и флаг времени (после 16:00)
         Triple(targetIdx, todayIdx, currentHour >= 16)
     }
 
@@ -432,7 +450,7 @@ fun WeekViewContent(
         }
     }
 
-    var viewingImage by remember { mutableStateOf<String?>(null) }
+    var viewingImages by remember { mutableStateOf<Pair<List<String>, Int>?>(null) }
     var playingAudioId by remember { mutableStateOf<Long?>(null) }
     var transcribingId by remember { mutableStateOf<Long?>(null) }
 
@@ -452,16 +470,11 @@ fun WeekViewContent(
                 lessons = currentSchedule[dayKey] ?: emptyList(),
                 hwMap = hwMap,
                 dayKey = dayKey,
+                currentSchedule = currentSchedule,
                 bells = bells,
-
-                // Плашка "СЕГОДНЯ" показывается только если это текущий день И время до 16:00
                 isToday = (index == todayIndex && !isAfter16),
                 isTomorrow = (index == targetIndex && index != todayIndex),
-
-                // Фокус (рамка и свечение) только на целевом дне
                 isFocused = (index == targetIndex),
-
-                deletedIds = emptyList(),
                 playingAudioId = playingAudioId,
                 transcribingId = transcribingId,
                 onPlayAudio = { id, path ->
@@ -505,13 +518,14 @@ fun WeekViewContent(
                         if (idx != -1) hwList[idx] = hwList[idx].copy(isArchived = true)
                     }
                 },
-                onViewImage = { path -> viewingImage = path },
+                onViewImage = { paths, idx -> viewingImages = Pair(paths, idx) },
+                onTransfer = onTransfer,
                 lang = lang
             )
         }
     }
-    if (viewingImage != null) {
-        ImageViewer(viewingImage!!) { viewingImage = null }
+    if (viewingImages != null) {
+        ImageViewer(viewingImages!!.first, viewingImages!!.second) { viewingImages = null }
     }
 }
 
@@ -521,17 +535,18 @@ fun DaySection(
     lessons: List<Lesson>,
     hwMap: Map<String, List<Homework>>,
     dayKey: String,
+    currentSchedule: Map<String, List<Lesson>>,
     bells: List<BellTime>,
     isToday: Boolean,
     isTomorrow: Boolean,
     isFocused: Boolean,
-    deletedIds: List<Long>,
     playingAudioId: Long?,
     transcribingId: Long?,
     onPlayAudio: (Long, String) -> Unit,
     onTranscribe: (Long, String, String) -> Unit,
     onDeleteHw: (Long) -> Unit,
-    onViewImage: (String) -> Unit,
+    onViewImage: (List<String>, Int) -> Unit,
+    onTransfer: (Homework) -> Unit,
     lang: String
 ) {
     val clipboardManager = LocalClipboardManager.current
@@ -540,7 +555,22 @@ fun DaySection(
     fun findHomeworks(subject: String): List<Homework> {
         val subjectHwList = hwMap[subject.trim()] ?: return emptyList()
         return subjectHwList.filter { hw ->
-            Tr.data.values.any { langMap -> langMap[dayKey] == hw.targetDay }
+            val isCorrectDay =
+                hw.targetDay == dayKey || Tr.data.values.any { langMap -> langMap[dayKey] == hw.targetDay }
+            if (!isCorrectDay) return@filter false
+
+            val tDateStr = hw.targetDate
+            if (tDateStr != null) {
+                try {
+                    val tDate = LocalDate.parse(tDateStr)
+                    val today = LocalDate.now()
+                    if (tDate.isEqual(today) && LocalTime.now().hour >= 16) {
+                        return@filter false
+                    }
+                } catch (e: Exception) {
+                }
+            }
+            true
         }
     }
 
@@ -548,7 +578,7 @@ fun DaySection(
         modifier = Modifier
             .fillMaxWidth()
             .shadow(
-                elevation = if (isFocused) 12.dp else 0.dp, // Свечение только у дня с фокусом
+                elevation = if (isFocused) 12.dp else 0.dp,
                 shape = RoundedCornerShape(16.dp),
                 spotColor = Color.Black,
                 ambientColor = Color.Black
@@ -557,7 +587,7 @@ fun DaySection(
                 if (isFocused) 1.dp else 0.dp,
                 if (isFocused) Color.White else Color.Transparent,
                 RoundedCornerShape(16.dp)
-            ) // Рамка только у дня с фокусом
+            )
             .background(CardDark, RoundedCornerShape(16.dp))
             .padding(16.dp)
     ) {
@@ -568,11 +598,9 @@ fun DaySection(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(dayName, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
 
-                // Плашки для "СЕГОДНЯ" и "ЗАВТРА"
                 if (isToday) {
                     Text(
                         text = " ${Tr.get("today", lang)}",
@@ -598,28 +626,28 @@ fun DaySection(
                 }
             }
 
-            IconButton(onClick = {
-                val sb = StringBuilder().append(dayName.uppercase()).append("\n")
-                lessons.forEach { l ->
-                    if (l.subject.isNotEmpty()) {
-                        sb.append("• ${l.subject}")
-                        val hws = findHomeworks(l.subject)
-                        if (hws.isNotEmpty()) {
-                            val combinedText =
-                                hws.mapNotNull { it.text.takeIf { t -> t.isNotBlank() } }
-                                    .joinToString(", ")
-                            if (combinedText.isNotBlank()) {
-                                sb.append(" — $combinedText")
+            IconButton(
+                onClick = {
+                    val sb = StringBuilder().append(dayName.uppercase()).append("\n")
+                    lessons.forEach { l ->
+                        if (l.subject.isNotEmpty()) {
+                            sb.append("• ${l.subject}")
+                            val hws = findHomeworks(l.subject)
+                            if (hws.isNotEmpty()) {
+                                val combinedText =
+                                    hws.mapNotNull { it.text.takeIf { t -> t.isNotBlank() } }
+                                        .joinToString(", ")
+                                if (combinedText.isNotBlank()) sb.append(" — $combinedText")
                             }
+                            sb.append("\n")
                         }
-                        sb.append("\n")
                     }
-                }
-                clipboardManager.setText(AnnotatedString(sb.toString()))
-                Toast.makeText(context, Tr.get("copied", lang), Toast.LENGTH_SHORT).show()
-            }, modifier = Modifier
-                .size(32.dp)
-                .background(Zinc900, RoundedCornerShape(8.dp))) {
+                    clipboardManager.setText(AnnotatedString(sb.toString()))
+                    Toast.makeText(context, Tr.get("copied", lang), Toast.LENGTH_SHORT).show()
+                }, modifier = Modifier
+                    .size(32.dp)
+                    .background(Zinc900, RoundedCornerShape(8.dp))
+            ) {
                 Icon(
                     Icons.Default.ContentCopy,
                     "Copy",
@@ -640,6 +668,10 @@ fun DaySection(
                 if (lesson.subject.isNotEmpty()) {
                     val homeworks = findHomeworks(lesson.subject)
 
+                    val overdueHomeworks = hwMap[lesson.subject.trim()]?.filter { hw ->
+                        isOverdue(hw) && getNextLessonDay(hw.subject, currentSchedule) == dayKey
+                    } ?: emptyList()
+
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -647,35 +679,63 @@ fun DaySection(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.width(40.dp)) {
-                            Text(
-                                timeStart,
-                                color = Color.White,
-                                fontSize = 13.sp
-                            ); Text(timeEnd, color = Zinc500, fontSize = 11.sp)
+                            Text(timeStart, color = Color.White, fontSize = 13.sp)
+                            Text(timeEnd, color = Zinc500, fontSize = 11.sp)
                         }
-                        Spacer(modifier = Modifier.width(8.dp)); Text(
-                        lesson.icon,
-                        fontSize = 20.sp
-                    ); Spacer(modifier = Modifier.width(12.dp)); Column(
-                        modifier = Modifier.weight(
-                            1f
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(lesson.icon, fontSize = 20.sp)
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(lesson.subject, color = Color.White, fontSize = 16.sp)
+                        }
+                        if (lesson.room.isNotEmpty()) Text(
+                            lesson.room,
+                            color = Zinc500,
+                            fontSize = 13.sp
                         )
+                    }
+
+                    AnimatedVisibility(
+                        visible = overdueHomeworks.isNotEmpty(),
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically()
                     ) {
-                        Text(
-                            lesson.subject,
-                            color = Color.White,
-                            fontSize = 16.sp
-                        )
-                    }; if (lesson.room.isNotEmpty()) Text(
-                        lesson.room,
-                        color = Zinc500,
-                        fontSize = 13.sp
-                    )
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            overdueHomeworks.forEach { overdueHw ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(bottom = 6.dp),
+                                    horizontalArrangement = Arrangement.Start,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = Tr.get("uncompleted_hw", lang),
+                                        color = Zinc500,
+                                        fontSize = 12.sp,
+                                        lineHeight = 14.sp,
+                                        modifier = Modifier.weight(1f, fill = false)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = Tr.get("transfer_q", lang),
+                                        color = Color.White.copy(alpha = 0.7f),
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(4.dp))
+                                            .clickable { onTransfer(overdueHw) }
+                                            .padding(vertical = 2.dp, horizontal = 2.dp)
+                                    )
+                                }
+                            }
+                        }
                     }
 
                     AnimatedVisibility(
                         visible = homeworks.isNotEmpty(),
-                        exit = shrinkVertically() + fadeOut()
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically()
                     ) {
                         Card(
                             colors = CardDefaults.cardColors(containerColor = Zinc800),
@@ -719,11 +779,14 @@ fun DaySection(
                                 val allImages = homeworks.flatMap { it.imagePaths }
                                 if (allImages.isNotEmpty()) {
                                     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        items(allImages) { path ->
+                                        itemsIndexed(allImages) { imgIdx, path ->
                                             Box(modifier = Modifier.size(100.dp)) {
-                                                AsyncImagePreview(
-                                                    path
-                                                ) { onViewImage(path) }
+                                                AsyncImagePreview(path) {
+                                                    onViewImage(
+                                                        allImages,
+                                                        imgIdx
+                                                    )
+                                                }
                                             }
                                         }
                                     }
@@ -741,7 +804,11 @@ fun DaySection(
                                         fontWeight = FontWeight.Bold,
                                         modifier = Modifier
                                             .clickable {
-                                                homeworks.forEach { onDeleteHw(it.id) }
+                                                homeworks.forEach {
+                                                    onDeleteHw(
+                                                        it.id
+                                                    )
+                                                }
                                             }
                                             .padding(4.dp)
                                     )
@@ -758,22 +825,18 @@ fun DaySection(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.width(40.dp)) {
-                            Text(
-                                timeStart,
-                                color = Zinc500,
-                                fontSize = 13.sp
-                            ); Text(timeEnd, color = Zinc500, fontSize = 11.sp)
-                        }; Spacer(modifier = Modifier.width(8.dp)); Text(
-                        "☕",
-                        fontSize = 20.sp
-                    ); Spacer(
-                        modifier = Modifier.width(12.dp)
-                    ); Text(
-                        "--- " + Tr.get("window", lang) + " ---",
-                        color = Zinc500,
-                        fontSize = 14.sp,
-                        fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
-                    )
+                            Text(timeStart, color = Zinc500, fontSize = 13.sp)
+                            Text(timeEnd, color = Zinc500, fontSize = 11.sp)
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("☕", fontSize = 20.sp)
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            "--- " + Tr.get("window", lang) + " ---",
+                            color = Zinc500,
+                            fontSize = 14.sp,
+                            fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+                        )
                     }
                 }
                 if (i < maxIndex) Divider(color = Zinc800, thickness = 0.5.dp)
@@ -793,10 +856,12 @@ fun DaySection(
 @Composable
 fun ListViewContent(
     hwList: MutableList<Homework>,
+    currentSchedule: Map<String, List<Lesson>>,
     settingsManager: SettingsManager,
     lang: String,
     topPadding: androidx.compose.ui.unit.Dp,
-    bottomPadding: androidx.compose.ui.unit.Dp
+    bottomPadding: androidx.compose.ui.unit.Dp,
+    onTransfer: (Homework) -> Unit
 ) {
     val displayList by remember(hwList) {
         derivedStateOf { hwList.filter { !it.isArchived } }
@@ -806,7 +871,7 @@ fun ListViewContent(
     val hwManager = remember { HomeworkManager(context.applicationContext) }
     val coroutineScope = rememberCoroutineScope()
 
-    var viewingImage by remember { mutableStateOf<String?>(null) }
+    var viewingImages by remember { mutableStateOf<Pair<List<String>, Int>?>(null) }
     var playingAudioId by remember { mutableStateOf<Long?>(null) }
     var transcribingId by remember { mutableStateOf<Long?>(null) }
 
@@ -833,7 +898,12 @@ fun ListViewContent(
                     shape = RoundedCornerShape(20.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .animateItemPlacement()
+                        .animateItemPlacement(
+                            animationSpec = spring(
+                                dampingRatio = 0.8f,
+                                stiffness = Spring.StiffnessLow
+                            )
+                        )
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -859,18 +929,17 @@ fun ListViewContent(
                             Text(hw.text, color = Color.White)
                         }
 
-                        // --- АУДИО ---
                         hw.audioPath?.let { path ->
                             Spacer(Modifier.height(8.dp))
                             TelegramAudioPlayer(
                                 isPlaying = playingAudioId == hw.id,
                                 onPlayPause = {
                                     if (playingAudioId == hw.id) {
-                                        SimpleAudioPlayer.stop()
-                                        playingAudioId = null
+                                        SimpleAudioPlayer.stop(); playingAudioId = null
                                     } else {
-                                        playingAudioId = hw.id
-                                        SimpleAudioPlayer.play(path) { playingAudioId = null }
+                                        playingAudioId = hw.id; SimpleAudioPlayer.play(path) {
+                                            playingAudioId = null
+                                        }
                                     }
                                 },
                                 onTranscribe = {
@@ -908,23 +977,57 @@ fun ListViewContent(
                             )
                         }
 
-                        // --- ИСПРАВЛЕНИЕ: ДОБАВЛЕН ВЫВОД ФОТО ---
                         if (hw.imagePaths.isNotEmpty()) {
                             Spacer(modifier = Modifier.height(12.dp))
                             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                items(hw.imagePaths) { path ->
+                                itemsIndexed(hw.imagePaths) { imgIdx, path ->
                                     Box(
                                         modifier = Modifier
                                             .size(80.dp)
                                             .clip(RoundedCornerShape(12.dp))
                                     ) {
-                                        AsyncImagePreview(path) { viewingImage = path }
+                                        AsyncImagePreview(path) {
+                                            viewingImages = Pair(hw.imagePaths, imgIdx)
+                                        }
                                     }
                                 }
                             }
                         }
 
                         Spacer(Modifier.height(12.dp))
+
+                        AnimatedVisibility(
+                            visible = isOverdue(hw),
+                            enter = fadeIn() + expandVertically(),
+                            exit = fadeOut() + shrinkVertically()
+                        ) {
+                            val nextDayKey = getNextLessonDay(hw.subject, currentSchedule)
+                            val nextDayTranslated = Tr.get(nextDayKey, lang)
+
+                            val textWithoutEmoji =
+                                Tr.get("overdue_transfer", lang).replace("⚠️ ", "")
+                                    .replace("⚠️", "")
+
+                            OutlinedButton(
+                                onClick = { onTransfer(hw) },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .wrapContentHeight()
+                                    .padding(vertical = 4.dp),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    contentColor = Color.White.copy(
+                                        alpha = 0.7f
+                                    )
+                                ),
+                                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.3f))
+                            ) {
+                                Text(
+                                    text = "$textWithoutEmoji $nextDayTranslated?",
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
 
                         Button(
                             onClick = {
@@ -943,7 +1046,8 @@ fun ListViewContent(
                             ),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(40.dp),
+                                .wrapContentHeight()
+                                .padding(vertical = 4.dp),
                             shape = RoundedCornerShape(12.dp)
                         ) {
                             Text(Tr.get("done", lang), fontWeight = FontWeight.Bold)
@@ -953,9 +1057,10 @@ fun ListViewContent(
             }
         }
     }
-    if (viewingImage != null) ImageViewer(viewingImage!!) { viewingImage = null }
+    if (viewingImages != null) {
+        ImageViewer(viewingImages!!.first, viewingImages!!.second) { viewingImages = null }
+    }
 }
 
-// Допоміжні анімації обертання для іконки
 fun rotationIn() = fadeIn(tween(200)) + scaleIn(initialScale = 0.5f)
 fun rotationOut() = fadeOut(tween(200)) + scaleOut(targetScale = 0.5f)
