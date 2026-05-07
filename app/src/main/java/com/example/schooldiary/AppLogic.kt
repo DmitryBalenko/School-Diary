@@ -607,9 +607,12 @@ fun saveImageToInternalStorage(context: Context, uri: Uri): String? {
     }
 }
 
-fun getNextLessonDay(subject: String, schedule: Map<String, List<Lesson>>): String {
+fun getNextLessonDay(subject: String, schedule: Map<String, List<Lesson>>, isTransfer: Boolean = false): String {
     val today = LocalDate.now()
-    for (i in 1..14) {
+    val currentHour = java.time.LocalTime.now().hour
+    val startOffset = if (isTransfer && currentHour < 16) 0 else 1
+
+    for (i in startOffset..14) {
         val checkDate = today.plusDays(i.toLong())
         val dayName = checkDate.dayOfWeek.name
         val lessonsForDay = schedule[dayName]
@@ -623,9 +626,12 @@ fun getNextLessonDay(subject: String, schedule: Map<String, List<Lesson>>): Stri
     return "UNKNOWN"
 }
 
-fun getNextLessonDate(subject: String, schedule: Map<String, List<Lesson>>): String {
+fun getNextLessonDate(subject: String, schedule: Map<String, List<Lesson>>, isTransfer: Boolean = false): String {
     val today = LocalDate.now()
-    for (i in 1..14) {
+    val currentHour = java.time.LocalTime.now().hour
+    val startOffset = if (isTransfer && currentHour < 16) 0 else 1
+
+    for (i in startOffset..14) {
         val checkDate = today.plusDays(i.toLong())
         val dayName = checkDate.dayOfWeek.name
         val lessonsForDay = schedule[dayName]

@@ -18,6 +18,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
@@ -123,9 +124,10 @@ import kotlin.math.roundToInt
 
 private fun isOverdue(hw: Homework): Boolean {
     if (hw.isArchived) return false
-    val tDateStr = hw.targetDate ?: return false
+    val tDateStr = hw.targetDate?.trim() ?: return false
     return try {
-        val tDate = LocalDate.parse(tDateStr)
+        val cleanStr = if (tDateStr.contains("T")) tDateStr.substringBefore("T") else tDateStr.substringBefore(" ")
+        val tDate = LocalDate.parse(cleanStr)
         val today = LocalDate.now()
 
         if (tDate.isBefore(today)) return true
@@ -200,8 +202,8 @@ fun UnifiedHomeworkScreen(
 
     val onTransferHw = { hw: Homework ->
         scope.launch {
-            val newDate = getNextLessonDate(hw.subject, currentSchedule)
-            val newDay = getNextLessonDay(hw.subject, currentSchedule)
+            val newDate = getNextLessonDate(hw.subject, currentSchedule, isTransfer = true)
+            val newDay = getNextLessonDay(hw.subject, currentSchedule, isTransfer = true)
             val updatedHw = hw.copy(targetDate = newDate, targetDay = newDay)
 
             hwManager.updateHomework(updatedHw)
@@ -218,7 +220,6 @@ fun UnifiedHomeworkScreen(
             .background(BlackBg)
             .statusBarsPadding()
     ) {
-
         if (offsetX.value < 0) {
             val pullDistance = offsetX.value.absoluteValue
             val arrowRotation by animateFloatAsState(if (isPastThreshold) 180f else 0f)
@@ -421,22 +422,60 @@ fun WeekViewContent(
     bottomPadding: androidx.compose.ui.unit.Dp,
     onTransfer: (Homework) -> Unit
 ) {
-    val daysKeys = listOf("MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY")
+    // Всі дні тижня жорстко зафіксовані в пам'яті
+    val daysKeys = listOf("MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY")
 
-    val (targetIndex, todayIndex, isAfter16) = remember {
+    // Динамічний стан для суботи та неділі
+    val hasSat by remember(hwList) {
+        derivedStateOf { hwList.any { !it.isArchived && (it.targetDay == "SATURDAY" || Tr.data.values.any { map -> map["SATURDAY"] == it.targetDay }) } }
+    }
+    val hasSun by remember(hwList) {
+        derivedStateOf { hwList.any { !it.isArchived && (it.targetDay == "SUNDAY" || Tr.data.values.any { map -> map["SUNDAY"] == it.targetDay }) } }
+    }
+
+    val (targetIndex, todayIndex, isAfter16, startOfWeek) = remember(hasSat, hasSun) {
         val now = java.time.LocalDateTime.now()
-        val currentDay = now.dayOfWeek.name
+        val currentDayStr = now.dayOfWeek.name
+        val currentDayOfWeek = now.toLocalDate().dayOfWeek.value // 1..7
         val currentHour = now.hour
+        val todayDate = now.toLocalDate()
 
-        val todayIdx = daysKeys.indexOf(currentDay)
+        val todayIdx = daysKeys.indexOf(currentDayStr)
 
-        val targetIdx = when (currentDay) {
+        val targetIdx = when (currentDayStr) {
             "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY" -> if (currentHour < 16) todayIdx else todayIdx + 1
-            "FRIDAY" -> if (currentHour < 16) todayIdx else 0
-            "SATURDAY", "SUNDAY" -> 0
+            "FRIDAY" -> {
+                if (currentHour < 16) todayIdx
+                else if (hasSat) 5
+                else if (hasSun) 6
+                else 0
+            }
+            "SATURDAY" -> {
+                if (currentHour < 16 && hasSat) 5
+                else if (hasSun) 6
+                else 0
+            }
+            "SUNDAY" -> {
+                if (currentHour < 16 && hasSun) 6
+                else 0
+            }
             else -> 0
         }
-        Triple(targetIdx, todayIdx, currentHour >= 16)
+
+        val shiftToNextWeek = when (currentDayStr) {
+            "FRIDAY" -> currentHour >= 16 && !hasSat && !hasSun
+            "SATURDAY" -> currentHour >= 16 && !hasSun || (!hasSat && !hasSun)
+            "SUNDAY" -> currentHour >= 16 || (!hasSun)
+            else -> false
+        }
+
+        val baseStart = if (shiftToNextWeek) {
+            todayDate.plusDays((8 - currentDayOfWeek).toLong())
+        } else {
+            todayDate.minusDays((currentDayOfWeek - 1).toLong())
+        }
+
+        Tuple4(targetIdx, todayIdx, currentHour >= 16, baseStart)
     }
 
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = targetIndex)
@@ -461,67 +500,84 @@ fun WeekViewContent(
             start = 16.dp,
             end = 16.dp,
             bottom = bottomPadding
-        ),
-        verticalArrangement = Arrangement.spacedBy(24.dp)
+        )
     ) {
-        itemsIndexed(items = daysKeys) { index, dayKey ->
-            DaySection(
-                dayName = Tr.get(dayKey, lang),
-                lessons = currentSchedule[dayKey] ?: emptyList(),
-                hwMap = hwMap,
-                dayKey = dayKey,
-                currentSchedule = currentSchedule,
-                bells = bells,
-                isToday = (index == todayIndex && !isAfter16),
-                isTomorrow = (index == targetIndex && index != todayIndex),
-                isFocused = (index == targetIndex),
-                playingAudioId = playingAudioId,
-                transcribingId = transcribingId,
-                onPlayAudio = { id, path ->
-                    if (playingAudioId == id) {
-                        SimpleAudioPlayer.stop(); playingAudioId = null
-                    } else {
-                        playingAudioId = id; SimpleAudioPlayer.play(path) { playingAudioId = null }
-                    }
-                },
-                onTranscribe = { id, path, currentText ->
-                    if (settingsManager.apiKey.isBlank()) {
-                        Toast.makeText(context, Tr.get("no_api_key", lang), Toast.LENGTH_LONG)
-                            .show()
-                    } else {
-                        transcribingId = id
-                        coroutineScope.launch {
-                            val transcript =
-                                GeminiClient.transcribeAudio(File(path), settingsManager.apiKey)
-                            transcribingId = null
-                            if (!transcript.isNullOrBlank()) {
-                                val separator = if (currentText.isNotEmpty()) "\n" else ""
-                                val indexHw = hwList.indexOfFirst { it.id == id }
-                                if (indexHw != -1) {
-                                    val newHw =
-                                        hwList[indexHw].copy(text = hwList[indexHw].text + separator + transcript)
-                                    hwList[indexHw] = newHw
-                                    hwManager.updateHomework(newHw)
+        // Додано key, щоб анімації зникнення працювали коректно
+        itemsIndexed(items = daysKeys, key = { _, day -> day }) { index, dayKey ->
+            val isWeekend = dayKey == "SATURDAY" || dayKey == "SUNDAY"
+            val isVisible = !isWeekend || (dayKey == "SATURDAY" && hasSat) || (dayKey == "SUNDAY" && hasSun)
+
+            // AnimatedVisibility огортає день. Якщо завдання зникає, зникає і сам день плавно!
+            AnimatedVisibility(
+                visible = isVisible,
+                enter = fadeIn(tween(400)) + expandVertically(tween(400)),
+                exit = fadeOut(tween(400)) + shrinkVertically(tween(400))
+            ) {
+                // Відступ перенесено сюди, щоб не було "фантомних" прогалин після зникнення
+                Box(modifier = Modifier.padding(bottom = 24.dp)) {
+                    val dayOffset = index.toLong()
+                    val sectionDate = startOfWeek.plusDays(dayOffset)
+
+                    DaySection(
+                        dayName = Tr.get(dayKey, lang),
+                        lessons = currentSchedule[dayKey] ?: emptyList(),
+                        hwMap = hwMap,
+                        dayKey = dayKey,
+                        sectionDate = sectionDate,
+                        currentSchedule = currentSchedule,
+                        bells = bells,
+                        isToday = (index == todayIndex && !isAfter16),
+                        isTomorrow = (index == targetIndex && index != todayIndex),
+                        isFocused = (index == targetIndex),
+                        playingAudioId = playingAudioId,
+                        transcribingId = transcribingId,
+                        onPlayAudio = { id, path ->
+                            if (playingAudioId == id) {
+                                SimpleAudioPlayer.stop(); playingAudioId = null
+                            } else {
+                                playingAudioId = id; SimpleAudioPlayer.play(path) { playingAudioId = null }
+                            }
+                        },
+                        onTranscribe = { id, path, currentText ->
+                            if (settingsManager.apiKey.isBlank()) {
+                                Toast.makeText(context, Tr.get("no_api_key", lang), Toast.LENGTH_LONG)
+                                    .show()
+                            } else {
+                                transcribingId = id
+                                coroutineScope.launch {
+                                    val transcript =
+                                        GeminiClient.transcribeAudio(File(path), settingsManager.apiKey)
+                                    transcribingId = null
+                                    if (!transcript.isNullOrBlank()) {
+                                        val separator = if (currentText.isNotEmpty()) "\n" else ""
+                                        val indexHw = hwList.indexOfFirst { it.id == id }
+                                        if (indexHw != -1) {
+                                            val newHw =
+                                                hwList[indexHw].copy(text = hwList[indexHw].text + separator + transcript)
+                                            hwList[indexHw] = newHw
+                                            hwManager.updateHomework(newHw)
+                                        }
+                                    }
                                 }
                             }
-                        }
-                    }
-                },
-                onDeleteHw = { id ->
-                    coroutineScope.launch {
-                        if (playingAudioId == id) {
-                            SimpleAudioPlayer.stop(); playingAudioId = null
-                        }
-                        delay(300)
-                        hwManager.archiveHomework(id)
-                        val idx = hwList.indexOfFirst { it.id == id }
-                        if (idx != -1) hwList[idx] = hwList[idx].copy(isArchived = true)
-                    }
-                },
-                onViewImage = { paths, idx -> viewingImages = Pair(paths, idx) },
-                onTransfer = onTransfer,
-                lang = lang
-            )
+                        },
+                        onDeleteHw = { id ->
+                            coroutineScope.launch {
+                                if (playingAudioId == id) {
+                                    SimpleAudioPlayer.stop(); playingAudioId = null
+                                }
+                                delay(300) // невелика затримка для тактильного ефекту кліку
+                                hwManager.archiveHomework(id)
+                                val idx = hwList.indexOfFirst { it.id == id }
+                                if (idx != -1) hwList[idx] = hwList[idx].copy(isArchived = true)
+                            }
+                        },
+                        onViewImage = { paths, idx -> viewingImages = Pair(paths, idx) },
+                        onTransfer = onTransfer,
+                        lang = lang
+                    )
+                }
+            }
         }
     }
     if (viewingImages != null) {
@@ -535,6 +591,7 @@ fun DaySection(
     lessons: List<Lesson>,
     hwMap: Map<String, List<Homework>>,
     dayKey: String,
+    sectionDate: LocalDate,
     currentSchedule: Map<String, List<Lesson>>,
     bells: List<BellTime>,
     isToday: Boolean,
@@ -552,6 +609,8 @@ fun DaySection(
     val clipboardManager = LocalClipboardManager.current
     val context = LocalContext.current
 
+    val lessonSubjects = lessons.map { it.subject.trim() }.filter { it.isNotEmpty() }
+
     fun findHomeworks(subject: String): List<Homework> {
         val subjectHwList = hwMap[subject.trim()] ?: return emptyList()
         return subjectHwList.filter { hw ->
@@ -559,15 +618,10 @@ fun DaySection(
                 hw.targetDay == dayKey || Tr.data.values.any { langMap -> langMap[dayKey] == hw.targetDay }
             if (!isCorrectDay) return@filter false
 
-            val tDateStr = hw.targetDate
-            if (tDateStr != null) {
-                try {
-                    val tDate = LocalDate.parse(tDateStr)
-                    val today = LocalDate.now()
-                    if (tDate.isEqual(today) && LocalTime.now().hour >= 16) {
-                        return@filter false
-                    }
-                } catch (e: Exception) {
+            if (isOverdue(hw)) {
+                val nextDay = getNextLessonDay(hw.subject, currentSchedule, isTransfer = true)
+                if (nextDay != "UNKNOWN") {
+                    return@filter false
                 }
             }
             true
@@ -589,6 +643,7 @@ fun DaySection(
                 RoundedCornerShape(16.dp)
             )
             .background(CardDark, RoundedCornerShape(16.dp))
+            .animateContentSize() // Анімація зміни розмірів блоку
             .padding(16.dp)
     ) {
         Row(
@@ -669,7 +724,7 @@ fun DaySection(
                     val homeworks = findHomeworks(lesson.subject)
 
                     val overdueHomeworks = hwMap[lesson.subject.trim()]?.filter { hw ->
-                        isOverdue(hw) && getNextLessonDay(hw.subject, currentSchedule) == dayKey
+                        isOverdue(hw) && getNextLessonDay(hw.subject, currentSchedule, isTransfer = true) == dayKey
                     } ?: emptyList()
 
                     Row(
@@ -701,33 +756,34 @@ fun DaySection(
                         exit = fadeOut() + shrinkVertically()
                     ) {
                         Column(modifier = Modifier.fillMaxWidth()) {
-                            overdueHomeworks.forEach { overdueHw ->
-                                Row(
+                            val countText = if (overdueHomeworks.size > 1) " (${overdueHomeworks.size})" else ""
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = 6.dp),
+                                horizontalArrangement = Arrangement.Start,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = Tr.get("uncompleted_hw", lang) + countText,
+                                    color = Zinc500,
+                                    fontSize = 12.sp,
+                                    lineHeight = 14.sp,
+                                    modifier = Modifier.weight(1f, fill = false)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = Tr.get("transfer_q", lang),
+                                    color = Color.White.copy(alpha = 0.7f),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
                                     modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(bottom = 6.dp),
-                                    horizontalArrangement = Arrangement.Start,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = Tr.get("uncompleted_hw", lang),
-                                        color = Zinc500,
-                                        fontSize = 12.sp,
-                                        lineHeight = 14.sp,
-                                        modifier = Modifier.weight(1f, fill = false)
-                                    )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(
-                                        text = Tr.get("transfer_q", lang),
-                                        color = Color.White.copy(alpha = 0.7f),
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        modifier = Modifier
-                                            .clip(RoundedCornerShape(4.dp))
-                                            .clickable { onTransfer(overdueHw) }
-                                            .padding(vertical = 2.dp, horizontal = 2.dp)
-                                    )
-                                }
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .clickable {
+                                            overdueHomeworks.forEach { onTransfer(it) }
+                                        }
+                                        .padding(vertical = 2.dp, horizontal = 2.dp)
+                                )
                             }
                         }
                     }
@@ -737,84 +793,16 @@ fun DaySection(
                         enter = fadeIn() + expandVertically(),
                         exit = fadeOut() + shrinkVertically()
                     ) {
-                        Card(
-                            colors = CardDefaults.cardColors(containerColor = Zinc800),
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(start = 48.dp, bottom = 12.dp)
-                        ) {
-                            Column(modifier = Modifier.padding(12.dp)) {
-
-                                val allText =
-                                    homeworks.mapNotNull { it.text.takeIf { t -> t.isNotBlank() } }
-                                        .joinToString("\n\n")
-                                if (allText.isNotBlank()) {
-                                    Text(allText, color = Color.White.copy(0.9f), fontSize = 14.sp)
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                }
-
-                                homeworks.forEach { hw ->
-                                    val currentAudioPath = hw.audioPath
-                                    if (currentAudioPath != null) {
-                                        Spacer(modifier = Modifier.height(4.dp))
-                                        TelegramAudioPlayer(
-                                            isPlaying = playingAudioId == hw.id,
-                                            onPlayPause = { onPlayAudio(hw.id, currentAudioPath) },
-                                            onTranscribe = {
-                                                onTranscribe(
-                                                    hw.id,
-                                                    currentAudioPath,
-                                                    hw.text
-                                                )
-                                            },
-                                            isTranscribing = transcribingId == hw.id,
-                                            lang = lang,
-                                            isSaved = true
-                                        )
-                                        Spacer(modifier = Modifier.height(8.dp))
-                                    }
-                                }
-
-                                val allImages = homeworks.flatMap { it.imagePaths }
-                                if (allImages.isNotEmpty()) {
-                                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        itemsIndexed(allImages) { imgIdx, path ->
-                                            Box(modifier = Modifier.size(100.dp)) {
-                                                AsyncImagePreview(path) {
-                                                    onViewImage(
-                                                        allImages,
-                                                        imgIdx
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    }
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                }
-
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.End
-                                ) {
-                                    Text(
-                                        text = Tr.get("done", lang),
-                                        color = Zinc500,
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        modifier = Modifier
-                                            .clickable {
-                                                homeworks.forEach {
-                                                    onDeleteHw(
-                                                        it.id
-                                                    )
-                                                }
-                                            }
-                                            .padding(4.dp)
-                                    )
-                                }
-                            }
-                        }
+                        HomeworkListCard(
+                            homeworks = homeworks,
+                            playingAudioId = playingAudioId,
+                            transcribingId = transcribingId,
+                            onPlayAudio = onPlayAudio,
+                            onTranscribe = onTranscribe,
+                            onDeleteHw = onDeleteHw,
+                            onViewImage = onViewImage,
+                            lang = lang
+                        )
                     }
                 } else {
                     Row(
@@ -842,12 +830,94 @@ fun DaySection(
                 if (i < maxIndex) Divider(color = Zinc800, thickness = 0.5.dp)
             }
         } else {
-            Text(
-                Tr.get("no_lessons", lang),
-                color = Zinc500,
-                fontSize = 14.sp,
-                modifier = Modifier.padding(8.dp)
-            )
+            if (dayKey != "SATURDAY" && dayKey != "SUNDAY") {
+                Text(
+                    Tr.get("no_lessons", lang),
+                    color = Zinc500,
+                    fontSize = 14.sp,
+                    modifier = Modifier.padding(8.dp)
+                )
+            }
+        }
+
+        // --- ДОДАТКОВІ ЗАВДАННЯ (ПОЗА РОЗКЛАДОМ) ---
+        val extraHomeworks = hwMap.values.flatten().filter { hw ->
+            if (hw.isArchived) return@filter false
+            val tDateStr = hw.targetDate?.trim() ?: ""
+            if (tDateStr.isNotEmpty()) {
+                try {
+                    val cleanStr = if (tDateStr.contains("T")) tDateStr.substringBefore("T") else tDateStr.substringBefore(" ")
+                    cleanStr == sectionDate.toString() && hw.subject.trim() !in lessonSubjects
+                } catch (e: Exception) {
+                    false
+                }
+            } else {
+                false
+            }
+        }
+
+        val extraBySubject = extraHomeworks.groupBy { it.subject.trim() }
+
+        // Зберігаємо історію, щоб завдання відмальовувало анімацію зникнення
+        val extraSubjectsHistory = remember { mutableMapOf<String, String>() }
+        extraBySubject.forEach { (subj, hws) ->
+            if (hws.isNotEmpty()) {
+                extraSubjectsHistory[subj] = hws.first().icon
+            }
+        }
+
+        AnimatedVisibility(
+            visible = extraSubjectsHistory.keys.any { !extraBySubject[it].isNullOrEmpty() },
+            enter = fadeIn() + expandVertically(),
+            exit = fadeOut() + shrinkVertically()
+        ) {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Divider(color = Zinc800, thickness = 1.dp)
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = Tr.get("extra_tasks", lang),
+                    color = Zinc500,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                extraSubjectsHistory.forEach { (subj, icon) ->
+                    val hws = extraBySubject[subj] ?: emptyList()
+                    AnimatedVisibility(
+                        visible = hws.isNotEmpty(),
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically()
+                    ) {
+                        Column {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.width(40.dp)) {}
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(icon, fontSize = 20.sp)
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(subj, color = Color.White, fontSize = 16.sp)
+                            }
+
+                            HomeworkListCard(
+                                homeworks = hws,
+                                playingAudioId = playingAudioId,
+                                transcribingId = transcribingId,
+                                onPlayAudio = onPlayAudio,
+                                onTranscribe = onTranscribe,
+                                onDeleteHw = onDeleteHw,
+                                onViewImage = onViewImage,
+                                lang = lang
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -863,8 +933,36 @@ fun ListViewContent(
     bottomPadding: androidx.compose.ui.unit.Dp,
     onTransfer: (Homework) -> Unit
 ) {
-    val displayList by remember(hwList) {
-        derivedStateOf { hwList.filter { !it.isArchived } }
+    val displayItems by remember(hwList, currentSchedule) {
+        derivedStateOf {
+            hwList.filter { !it.isArchived }.map { hw ->
+                val tDateStr = hw.targetDate?.trim() ?: ""
+                var isExtra = false
+                var cleanDateStr = ""
+                if (tDateStr.isNotEmpty()) {
+                    try {
+                        val cleanStr = if (tDateStr.contains("T")) tDateStr.substringBefore("T") else tDateStr.substringBefore(" ")
+                        cleanDateStr = cleanStr
+                        val date = LocalDate.parse(cleanStr)
+                        val dayKey = date.dayOfWeek.name
+                        val dayLessons = currentSchedule[dayKey] ?: emptyList()
+                        isExtra = hw.subject.trim() !in dayLessons.map { it.subject.trim() }
+                    } catch (e: Exception) {
+                        isExtra = false
+                    }
+                }
+                Triple(hw, isExtra, cleanDateStr)
+            }.sortedWith(Comparator { t1, t2 ->
+                if (t1.second && !t2.second) return@Comparator -1
+                if (!t1.second && t2.second) return@Comparator 1
+
+                if (t1.second && t2.second) {
+                    return@Comparator t1.third.compareTo(t2.third)
+                }
+
+                0
+            })
+        }
     }
 
     val context = LocalContext.current
@@ -875,7 +973,7 @@ fun ListViewContent(
     var playingAudioId by remember { mutableStateOf<Long?>(null) }
     var transcribingId by remember { mutableStateOf<Long?>(null) }
 
-    if (displayList.isEmpty()) {
+    if (displayItems.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), Alignment.Center) {
             Text(Tr.get("no_tasks", lang), color = Zinc500)
         }
@@ -890,12 +988,13 @@ fun ListViewContent(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             items(
-                items = displayList,
-                key = { it.id }
-            ) { hw ->
+                items = displayItems,
+                key = { it.first.id }
+            ) { (hw, isExtra, _) ->
                 Card(
                     colors = CardDefaults.cardColors(containerColor = Zinc900),
                     shape = RoundedCornerShape(20.dp),
+                    border = if (isExtra) BorderStroke(1.dp, Color.White) else null,
                     modifier = Modifier
                         .fillMaxWidth()
                         .animateItemPlacement(
@@ -906,6 +1005,17 @@ fun ListViewContent(
                         )
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
+                        if (isExtra) {
+                            Row(modifier = Modifier.padding(bottom = 12.dp)) {
+                                Text(
+                                    text = Tr.get("extra_badge", lang),
+                                    color = Color.White,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(hw.icon, fontSize = 24.sp)
                             Spacer(Modifier.width(12.dp))
@@ -1001,7 +1111,7 @@ fun ListViewContent(
                             enter = fadeIn() + expandVertically(),
                             exit = fadeOut() + shrinkVertically()
                         ) {
-                            val nextDayKey = getNextLessonDay(hw.subject, currentSchedule)
+                            val nextDayKey = getNextLessonDay(hw.subject, currentSchedule, isTransfer = true)
                             val nextDayTranslated = Tr.get(nextDayKey, lang)
 
                             val textWithoutEmoji =
@@ -1062,5 +1172,107 @@ fun ListViewContent(
     }
 }
 
+@Composable
+fun HomeworkListCard(
+    homeworks: List<Homework>,
+    playingAudioId: Long?,
+    transcribingId: Long?,
+    onPlayAudio: (Long, String) -> Unit,
+    onTranscribe: (Long, String, String) -> Unit,
+    onDeleteHw: (Long) -> Unit,
+    onViewImage: (List<String>, Int) -> Unit,
+    lang: String
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Zinc800),
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 48.dp, bottom = 12.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .animateContentSize(
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioNoBouncy,
+                        stiffness = Spring.StiffnessMedium
+                    )
+                )
+                .padding(12.dp)
+        ) {
+
+            val allText =
+                homeworks.mapNotNull { it.text.takeIf { t -> t.isNotBlank() } }
+                    .joinToString("\n\n")
+            if (allText.isNotBlank()) {
+                Text(allText, color = Color.White.copy(0.9f), fontSize = 14.sp)
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
+            homeworks.forEach { hw ->
+                val currentAudioPath = hw.audioPath
+                if (currentAudioPath != null) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    TelegramAudioPlayer(
+                        isPlaying = playingAudioId == hw.id,
+                        onPlayPause = { onPlayAudio(hw.id, currentAudioPath) },
+                        onTranscribe = {
+                            onTranscribe(
+                                hw.id,
+                                currentAudioPath,
+                                hw.text
+                            )
+                        },
+                        isTranscribing = transcribingId == hw.id,
+                        lang = lang,
+                        isSaved = true
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+            }
+
+            val allImages = homeworks.flatMap { it.imagePaths }
+            if (allImages.isNotEmpty()) {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    itemsIndexed(allImages) { imgIdx, path ->
+                        Box(modifier = Modifier.size(100.dp)) {
+                            AsyncImagePreview(path) {
+                                onViewImage(
+                                    allImages,
+                                    imgIdx
+                                )
+                            }
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                Text(
+                    text = Tr.get("done", lang),
+                    color = Zinc500,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier
+                        .clickable {
+                            homeworks.forEach {
+                                onDeleteHw(
+                                    it.id
+                                )
+                            }
+                        }
+                        .padding(4.dp)
+                )
+            }
+        }
+    }
+}
+
 fun rotationIn() = fadeIn(tween(200)) + scaleIn(initialScale = 0.5f)
 fun rotationOut() = fadeOut(tween(200)) + scaleOut(targetScale = 0.5f)
+
+data class Tuple4<A, B, C, D>(val first: A, val second: B, val third: C, val fourth: D)

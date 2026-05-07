@@ -386,6 +386,13 @@ fun SwipeToRevealCard(
         }
     }
 
+    // Сброс состояния удаления, когда карточка возвращается в исходное положение
+    LaunchedEffect(offsetAnim.value) {
+        if (offsetAnim.value == 0f) {
+            isDeleteConfirmed = false
+        }
+    }
+
     val backgroundColor by animateColorAsState(
         targetValue = if (isPastThreshold || isDeleteConfirmed) Color(0xFFEF4444) else Color(
             0xFF3F3F46

@@ -23,7 +23,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -58,12 +57,17 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDefaults
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -104,6 +108,7 @@ import com.bymrd1mm.schooldiary.getNextLessonDay
 import com.bymrd1mm.schooldiary.saveAudioToInternalStorage
 import com.bymrd1mm.schooldiary.saveImageToInternalStorage
 import com.example.schooldiary.BlackBg
+import com.example.schooldiary.BlueAction
 import com.example.schooldiary.Homework
 import com.example.schooldiary.RedDelete
 import com.example.schooldiary.Tr
@@ -120,7 +125,9 @@ import com.example.schooldiary.ui.components.formatSeconds
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneOffset
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -148,16 +155,15 @@ fun WriteHomeworkScreen(
 
     val focusManager = LocalFocusManager.current
     val interactionSource = remember { MutableInteractionSource() }
-    val haptic = LocalHapticFeedback.current // Для вібрації при довгому натисканні
+    val haptic = LocalHapticFeedback.current
 
-    // --- СТАН ДЛЯ ВИБОРУ ДНЯ ---
+    // --- СТАН ДЛЯ ВИБОРУ ДНЯ ТА ДАТИ ---
     var showDaySelector by remember { mutableStateOf(false) }
+    var showDatePicker by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    // Визначаємо стан клавіатури
     val isKeyboardOpen = WindowInsets.ime.getBottom(LocalDensity.current) > 0
 
-    // Логіка видимості аудіо
     val showAudioPlayer by remember(selectedImages.size, audioFile, isKeyboardOpen) {
         derivedStateOf {
             if (audioFile == null) false
@@ -172,7 +178,6 @@ fun WriteHomeworkScreen(
         }
     }
 
-    // Хелпер для обчислення дати примусово обраного дня
     fun getNextDateForDayKey(targetDayName: String): String {
         val today = LocalDate.now()
         for (i in 1..14) {
@@ -184,22 +189,28 @@ fun WriteHomeworkScreen(
         return today.toString()
     }
 
-    // --- ОНОВЛЕНА ФУНКЦІЯ ЗБЕРЕЖЕННЯ ---
-    // Тепер приймає параметр manualDayKey (якщо обрали день вручну)
-    fun saveHomeworkToDate(manualDayKey: String? = null) {
+    // --- ОНОВЛЕНА ФУНКЦІЯ ЗБЕРЕЖЕННЯ (ПІДТРИМУЄ EXACT DATE) ---
+    fun saveHomeworkToDate(manualDayKey: String? = null, exactDate: LocalDate? = null) {
         if (isRecording) {
             audioRecorder.stopRecording()
             isRecording = false
         }
 
-        // Якщо день обрано вручну - беремо його, якщо ні - шукаємо по розкладу
-        val targetDayKey = manualDayKey ?: getNextLessonDay(subject, scheduleManager.getSchedule())
-        val targetDayName = Tr.get(targetDayKey, lang)
+        val targetDayName: String
+        val targetDateReal: String
 
-        val targetDateReal = if (manualDayKey != null) {
-            getNextDateForDayKey(manualDayKey)
+        if (exactDate != null) {
+            targetDateReal = exactDate.toString()
+            targetDayName = Tr.get(exactDate.dayOfWeek.name, lang)
         } else {
-            getNextLessonDate(subject, scheduleManager.getSchedule())
+            val targetDayKey = manualDayKey ?: getNextLessonDay(subject, scheduleManager.getSchedule())
+            targetDayName = Tr.get(targetDayKey, lang)
+
+            targetDateReal = if (manualDayKey != null) {
+                getNextDateForDayKey(manualDayKey)
+            } else {
+                getNextLessonDate(subject, scheduleManager.getSchedule())
+            }
         }
 
         val savedAudioPath = audioFile?.let { saveAudioToInternalStorage(context, it) }
@@ -611,7 +622,6 @@ fun WriteHomeworkScreen(
                         ), animationSpec = tween(300), label = "border"
                     )
 
-                    // --- ОНОВЛЕНА КНОПКА ЗБЕРЕЖЕННЯ (ПІДТРИМУЄ LONG CLICK) ---
                     Box(
                         modifier = Modifier
                             .weight(1f)
@@ -621,9 +631,8 @@ fun WriteHomeworkScreen(
                             .border(1.dp, saveBtnBorderColor, RoundedCornerShape(16.dp))
                             .combinedClickable(
                                 enabled = canSave,
-                                onClick = { saveHomeworkToDate(null) }, // Звичайний клік (авто-розрахунок)
+                                onClick = { saveHomeworkToDate(null, null) },
                                 onLongClick = {
-                                    // Довгий клік (ручний вибір дня)
                                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                     focusManager.clearFocus()
                                     showDaySelector = true
@@ -660,7 +669,6 @@ fun WriteHomeworkScreen(
                         modifier = Modifier.padding(bottom = 16.dp)
                     )
 
-                    // Список днів (Понеділок - П'ятниця)
                     daysOrder.forEach { dayKey ->
                         Card(
                             modifier = Modifier
@@ -669,7 +677,7 @@ fun WriteHomeworkScreen(
                                 .clip(RoundedCornerShape(12.dp))
                                 .clickable {
                                     showDaySelector = false
-                                    saveHomeworkToDate(dayKey) // Зберігаємо на обраний день
+                                    saveHomeworkToDate(manualDayKey = dayKey)
                                 },
                             colors = CardDefaults.cardColors(containerColor = Zinc800)
                         ) {
@@ -695,10 +703,88 @@ fun WriteHomeworkScreen(
                             }
                         }
                     }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Кнопка для вибору точної дати з календаря
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 6.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable {
+                                showDaySelector = false
+                                showDatePicker = true
+                            },
+                        colors = CardDefaults.cardColors(containerColor = Zinc800)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                text = Tr.get("pick_date", lang),
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        }
+                    }
                 }
+            }
+        }
+
+        // --- CALENDAR DATE PICKER ДЛЯ ВИБОРУ ТОЧНОЇ ДАТИ ---
+        if (showDatePicker) {
+            val datePickerState = rememberDatePickerState()
+
+            DatePickerDialog(
+                onDismissRequest = { showDatePicker = false },
+                confirmButton = {
+                    TextButton(onClick = {
+                        datePickerState.selectedDateMillis?.let { millis ->
+                            // Використовуємо UTC, оскільки Material DatePicker повертає час опівночі за UTC
+                            val selectedDate = Instant.ofEpochMilli(millis)
+                                .atZone(ZoneOffset.UTC)
+                                .toLocalDate()
+                            saveHomeworkToDate(exactDate = selectedDate)
+                        }
+                        showDatePicker = false
+                    }) {
+                        Text(Tr.get("save", lang), color = BlueAction)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDatePicker = false }) {
+                        Text(Tr.get("cancel", lang), color = Zinc500)
+                    }
+                },
+                colors = DatePickerDefaults.colors(
+                    containerColor = Zinc900
+                )
+            ) {
+                DatePicker(
+                    state = datePickerState,
+                    colors = DatePickerDefaults.colors(
+                        titleContentColor = Color.White,
+                        headlineContentColor = Color.White,
+                        weekdayContentColor = Zinc500,
+                        subheadContentColor = Zinc500,
+                        yearContentColor = Color.White,
+                        currentYearContentColor = Color.White,
+                        selectedYearContentColor = Color.White,
+                        selectedYearContainerColor = BlueAction,
+                        dayContentColor = Color.White,
+                        selectedDayContentColor = Color.White,
+                        selectedDayContainerColor = BlueAction,
+                        todayContentColor = BlueAction,
+                        todayDateBorderColor = BlueAction
+                    )
+                )
             }
         }
     }
 }
-
-
