@@ -90,7 +90,14 @@ object Tr {
             "TUESDAY" to "Вівторок",
             "WEDNESDAY" to "Середа",
             "THURSDAY" to "Четвер",
-            "FRIDAY" to "П'ятниця"
+            "FRIDAY" to "П'ятниця",
+            "notes" to "Замітки",
+            "files" to "Файли",
+            "create_note" to "Замітка",
+            "upload_file" to "Файл",
+            "note_text" to "Текст...",
+            "custom_subject" to "Інше завдання",
+            "custom_subject_hint" to "Назва завдання..."
         ), "ru" to mapOf(
             "app_name" to "Мой Дневник",
             "hello" to "ПРИВЕТ, УЧЕНИК!",
@@ -177,7 +184,14 @@ object Tr {
             "TUESDAY" to "Вторник",
             "WEDNESDAY" to "Среда",
             "THURSDAY" to "Четверг",
-            "FRIDAY" to "Пятница"
+            "FRIDAY" to "Пятница",
+            "notes" to "Заметки",
+            "files" to "Файлы",
+            "create_note" to "Заметка",
+            "upload_file" to "Файл",
+            "note_text" to "Текст...",
+            "custom_subject" to "Другое задание",
+            "custom_subject_hint" to "Название задания..."
         ), "en" to mapOf(
             "app_name" to "My Diary",
             "hello" to "HELLO, STUDENT!",
@@ -264,7 +278,14 @@ object Tr {
             "TUESDAY" to "Tuesday",
             "WEDNESDAY" to "Wednesday",
             "THURSDAY" to "Thursday",
-            "FRIDAY" to "Friday"
+            "FRIDAY" to "Friday",
+            "notes" to "Notes",
+            "files" to "Files",
+            "create_note" to "Note",
+            "upload_file" to "File",
+            "note_text" to "Text...",
+            "custom_subject" to "Other task",
+            "custom_subject_hint" to "Task name..."
         )
     )
 
@@ -276,7 +297,7 @@ object Tr {
 // --- КОЛЬОРИ ---
 val BlackBg = Color(0xFF000000)
 val Zinc900 = Color(0xFF1C1C1E)
-val CardDark = Color(0xFF0A0A0A) // Дуже темний сірий, майже чорний
+val CardDark = Color(0xFF0A0A0A)
 val Zinc800 = Color(0xFF2C2C2E)
 val Zinc700 = Color(0xFF3A3A3C)
 val Zinc500 = Color(0xFF8E8E93)
@@ -288,38 +309,7 @@ val BlueCalendar = Color(0xFF4a90e2)
 
 // --- НАБІР ЕМОДЗІ ---
 val availableEmojis = listOf(
-    "📚",
-    "📐",
-    "🧪",
-    "🇬🇧",
-    "🎨",
-    "🤸",
-    "⚛️",
-    "🗣️",
-    "✍️",
-    "🌎",
-    "🌱",
-    "🛡️",
-    "💰",
-    "🗺️",
-    "💻",
-    "📖",
-    "📏",
-    "🎼",
-    "⚽",
-    "🏊",
-    "💃",
-    "🧠",
-    "🔨",
-    "🍳",
-    "🩺",
-    "⚖️",
-    "🎭",
-    "🎬",
-    "🎤",
-    "🦠",
-    "🧬",
-    "🔭"
+    "📚", "📐", "🧪", "🇬🇧", "🎨", "🤸", "⚛️", "🗣️", "✍️", "🌎", "🌱", "🛡️", "💰", "🗺️", "💻", "📖", "📏", "🎼", "⚽", "🏊", "💃", "🧠", "🔨", "🍳", "🩺", "⚖️", "🎭", "🎬", "🎤", "🦠", "🧬", "🔭"
 )
 
 // --- МОДЕЛІ ---
@@ -337,15 +327,22 @@ data class Homework(
     val subject: String,
     val text: String,
     var imagePaths: List<String>,
-    val date: String, // Creation date
+    val date: String,
     val icon: String,
-    val targetDay: String, // e.g. "MONDAY"
+    val targetDay: String,
     var audioPath: String? = null,
-    val targetDate: String? = null, // e.g. "2026-02-05" - The specific date assigned
+    val targetDate: String? = null,
     var isArchived: Boolean = false
 )
 
-data class SpaceFile(val name: String, val path: String, val type: FileType, val sizeStr: String)
+data class SubjectNote(
+    val id: Long,
+    val subject: String,
+    val content: String,
+    val date: String
+)
+
+data class SpaceFile(val name: String, val path: String, val type: FileType, val sizeStr: String, val date: String)
 enum class FileType { IMAGE, AUDIO, PDF, DOC, OTHER }
 data class BellTime(val id: Int, var start: String, var end: String)
 

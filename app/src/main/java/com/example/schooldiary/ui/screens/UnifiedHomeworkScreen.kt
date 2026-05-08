@@ -109,8 +109,8 @@ import com.example.schooldiary.Tr
 import com.example.schooldiary.Zinc500
 import com.example.schooldiary.Zinc800
 import com.example.schooldiary.Zinc900
-import com.example.schooldiary.getNextLessonDate
-import com.example.schooldiary.getNextLessonDay
+import com.bymrd1mm.schooldiary.getNextLessonDate
+import com.bymrd1mm.schooldiary.getNextLessonDay
 import com.example.schooldiary.ui.components.AsyncImagePreview
 import com.example.schooldiary.ui.components.ImageViewer
 import com.example.schooldiary.ui.components.TelegramAudioPlayer
@@ -628,6 +628,24 @@ fun DaySection(
         }
     }
 
+    // --- ДОДАТКОВІ ЗАВДАННЯ (ПОЗА РОЗКЛАДОМ) ---
+    val extraHomeworks = hwMap.values.flatten().filter { hw ->
+        if (hw.isArchived) return@filter false
+        val tDateStr = hw.targetDate?.trim() ?: ""
+        if (tDateStr.isNotEmpty()) {
+            try {
+                val cleanStr = if (tDateStr.contains("T")) tDateStr.substringBefore("T") else tDateStr.substringBefore(" ")
+                cleanStr == sectionDate.toString() && hw.subject.trim() !in lessonSubjects
+            } catch (e: Exception) {
+                false
+            }
+        } else {
+            false
+        }
+    }
+
+    val extraBySubject = extraHomeworks.groupBy { it.subject.trim() }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -697,6 +715,17 @@ fun DaySection(
                             sb.append("\n")
                         }
                     }
+
+                    if (extraBySubject.isNotEmpty()) {
+                        sb.append("\n${Tr.get("extra_tasks", lang)}\n")
+                        extraBySubject.forEach { (subj, hws) ->
+                            sb.append("• $subj")
+                            val combinedText = hws.mapNotNull { it.text.takeIf { t -> t.isNotBlank() } }.joinToString(", ")
+                            if (combinedText.isNotBlank()) sb.append(" — $combinedText")
+                            sb.append("\n")
+                        }
+                    }
+
                     clipboardManager.setText(AnnotatedString(sb.toString()))
                     Toast.makeText(context, Tr.get("copied", lang), Toast.LENGTH_SHORT).show()
                 }, modifier = Modifier
@@ -738,8 +767,10 @@ fun DaySection(
                             Text(timeEnd, color = Zinc500, fontSize = 11.sp)
                         }
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(lesson.icon, fontSize = 20.sp)
-                        Spacer(modifier = Modifier.width(12.dp))
+                        if (lesson.icon.isNotBlank()) {
+                            Text(lesson.icon, fontSize = 20.sp)
+                            Spacer(modifier = Modifier.width(12.dp))
+                        }
                         Column(modifier = Modifier.weight(1f)) {
                             Text(lesson.subject, color = Color.White, fontSize = 16.sp)
                         }
@@ -840,24 +871,6 @@ fun DaySection(
             }
         }
 
-        // --- ДОДАТКОВІ ЗАВДАННЯ (ПОЗА РОЗКЛАДОМ) ---
-        val extraHomeworks = hwMap.values.flatten().filter { hw ->
-            if (hw.isArchived) return@filter false
-            val tDateStr = hw.targetDate?.trim() ?: ""
-            if (tDateStr.isNotEmpty()) {
-                try {
-                    val cleanStr = if (tDateStr.contains("T")) tDateStr.substringBefore("T") else tDateStr.substringBefore(" ")
-                    cleanStr == sectionDate.toString() && hw.subject.trim() !in lessonSubjects
-                } catch (e: Exception) {
-                    false
-                }
-            } else {
-                false
-            }
-        }
-
-        val extraBySubject = extraHomeworks.groupBy { it.subject.trim() }
-
         // Зберігаємо історію, щоб завдання відмальовувало анімацію зникнення
         val extraSubjectsHistory = remember { mutableMapOf<String, String>() }
         extraBySubject.forEach { (subj, hws) ->
@@ -899,8 +912,10 @@ fun DaySection(
                             ) {
                                 Column(modifier = Modifier.width(40.dp)) {}
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text(icon, fontSize = 20.sp)
-                                Spacer(modifier = Modifier.width(12.dp))
+                                if (icon.isNotBlank()) {
+                                    Text(icon, fontSize = 20.sp)
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                }
                                 Text(subj, color = Color.White, fontSize = 16.sp)
                             }
 
@@ -1017,8 +1032,10 @@ fun ListViewContent(
                         }
 
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(hw.icon, fontSize = 24.sp)
-                            Spacer(Modifier.width(12.dp))
+                            if (hw.icon.isNotBlank()) {
+                                Text(hw.icon, fontSize = 24.sp)
+                                Spacer(Modifier.width(12.dp))
+                            }
                             Column {
                                 Text(
                                     hw.subject,
@@ -1027,7 +1044,7 @@ fun ListViewContent(
                                     fontSize = 18.sp
                                 )
                                 Text(
-                                    "${Tr.get("recorded_on", lang)} ${hw.targetDay}",
+                                    "${Tr.get("recorded_on", lang)} ${Tr.get(hw.targetDay, lang)}",
                                     color = Zinc500,
                                     fontSize = 12.sp
                                 )

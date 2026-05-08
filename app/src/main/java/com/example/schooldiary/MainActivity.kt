@@ -47,6 +47,7 @@ import com.example.schooldiary.FileType
 import com.example.schooldiary.Homework
 import com.example.schooldiary.Lesson
 import com.example.schooldiary.SpaceFile
+import com.example.schooldiary.SubjectNote
 import com.example.schooldiary.Zinc900
 import com.example.schooldiary.defaultBellSchedule
 import com.example.schooldiary.defaultScheduleData
@@ -99,10 +100,35 @@ class MySpaceManager(private val context: Context) {
         if (!rootDir.exists()) rootDir.mkdirs()
     }
 
+
     fun getActiveSubjects(): List<String> {
         val json = prefs.getString("myspace_subjects", "[]")
         val type = object : TypeToken<List<String>>() {}.type
         return gson.fromJson(json, type)
+    }
+
+    class NoteManager(context: Context) {
+        private val prefs = context.getSharedPreferences("school_diary_prefs", Context.MODE_PRIVATE)
+        private val gson = Gson()
+
+        fun getNotes(subject: String): List<SubjectNote> {
+            val json = prefs.getString("notes_$subject", null)
+            return if (json != null) {
+                gson.fromJson(json, object : TypeToken<List<SubjectNote>>() {}.type)
+            } else emptyList()
+        }
+
+        fun saveNote(note: SubjectNote) {
+            val current = getNotes(note.subject).toMutableList()
+            current.add(0, note) // Додаємо нову вгору
+            prefs.edit().putString("notes_${note.subject}", gson.toJson(current)).apply()
+        }
+
+        fun deleteNote(subject: String, noteId: Long) {
+            val current = getNotes(subject).toMutableList()
+            current.removeAll { it.id == noteId }
+            prefs.edit().putString("notes_$subject", gson.toJson(current)).apply()
+        }
     }
 
     fun addSubject(subject: String) {
@@ -129,7 +155,16 @@ class MySpaceManager(private val context: Context) {
         val subjectDir = File(rootDir, subject)
         if (!subjectDir.exists()) return emptyList()
         return subjectDir.listFiles()?.map { file ->
-            SpaceFile(file.name, file.absolutePath, getFileType(file), getFileSize(file))
+            val dateFormatter =
+                java.text.SimpleDateFormat("dd.MM.yyyy", java.util.Locale.getDefault())
+            val dateStr = dateFormatter.format(java.util.Date(file.lastModified()))
+            SpaceFile(
+                name = file.name,
+                path = file.absolutePath,
+                type = getFileType(file),
+                sizeStr = getFileSize(file),
+                date = dateStr
+            )
         }?.sortedBy { it.name } ?: emptyList()
     }
 
@@ -666,32 +701,42 @@ fun saveImageToInternalStorage(context: Context, uri: Uri): String? {
     }
 }
 
-fun getNextLessonDay(subject: String, schedule: Map<String, List<Lesson>>): String {
+fun getNextLessonDay(
+    subject: String,
+    schedule: Map<String, List<Lesson>>,
+    isTransfer: Boolean = false
+): String {
     val today = LocalDate.now()
-    for (i in 1..14) {
+    val currentHour = java.time.LocalTime.now().hour
+    val startOffset = if (isTransfer && currentHour < 16) 0 else 1
+
+    for (i in startOffset..14) {
         val checkDate = today.plusDays(i.toLong())
         val dayName = checkDate.dayOfWeek.name
-        val lessonsForDay = schedule[dayName]
-        val hasSubject = lessonsForDay?.any {
-            it.subject.trim().equals(subject.trim(), ignoreCase = true)
-        } == true
-        if (hasSubject) {
+        if (schedule[dayName]?.any {
+                it.subject.trim().equals(subject.trim(), ignoreCase = true)
+            } == true) {
             return dayName
         }
     }
     return "UNKNOWN"
 }
 
-fun getNextLessonDate(subject: String, schedule: Map<String, List<Lesson>>): String {
+fun getNextLessonDate(
+    subject: String,
+    schedule: Map<String, List<Lesson>>,
+    isTransfer: Boolean = false
+): String {
     val today = LocalDate.now()
-    for (i in 1..14) {
+    val currentHour = java.time.LocalTime.now().hour
+    val startOffset = if (isTransfer && currentHour < 16) 0 else 1
+
+    for (i in startOffset..14) {
         val checkDate = today.plusDays(i.toLong())
         val dayName = checkDate.dayOfWeek.name
-        val lessonsForDay = schedule[dayName]
-        val hasSubject = lessonsForDay?.any {
-            it.subject.trim().equals(subject.trim(), ignoreCase = true)
-        } == true
-        if (hasSubject) {
+        if (schedule[dayName]?.any {
+                it.subject.trim().equals(subject.trim(), ignoreCase = true)
+            } == true) {
             return checkDate.toString()
         }
     }
@@ -789,4 +834,3 @@ object MediaStoreUtils {
         return Bitmap.createScaledBitmap(bitmap, newWidth, newHeight, true)
     }
 }
-

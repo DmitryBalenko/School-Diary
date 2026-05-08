@@ -9,8 +9,10 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -21,6 +23,7 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -39,14 +42,16 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.outlined.AttachFile
 import androidx.compose.material.icons.outlined.Audiotrack
-import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.EditNote
 import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.InsertDriveFile
@@ -72,12 +77,17 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -92,6 +102,7 @@ import com.example.schooldiary.BlackBg
 import com.example.schooldiary.FileType
 import com.example.schooldiary.RedDelete
 import com.example.schooldiary.SpaceFile
+import com.example.schooldiary.SubjectNote
 import com.example.schooldiary.Tr
 import com.example.schooldiary.Zinc500
 import com.example.schooldiary.Zinc800
@@ -107,6 +118,7 @@ import org.burnoutcrew.reorderable.detectReorderAfterLongPress
 import org.burnoutcrew.reorderable.rememberReorderableLazyListState
 import org.burnoutcrew.reorderable.reorderable
 import java.io.File
+import java.time.LocalDate
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -383,6 +395,7 @@ fun MySpaceScreen(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SubjectSpaceScreen(
     navController: NavController,
@@ -390,11 +403,22 @@ fun SubjectSpaceScreen(
     subjectName: String,
     lang: String
 ) {
-    var files by remember { mutableStateOf(mySpaceManager.getFilesForSubject(subjectName)) }
     val context = LocalContext.current
+    val noteManager = remember { MySpaceManager.NoteManager(context) }
+
+    var files by remember { mutableStateOf(mySpaceManager.getFilesForSubject(subjectName)) }
+    var notes by remember { mutableStateOf(noteManager.getNotes(subjectName)) }
+
     var viewingImages by remember { mutableStateOf<Pair<List<String>, Int>?>(null) }
     var playingAudioId by remember { mutableStateOf<String?>(null) }
     var fileToDelete by remember { mutableStateOf<SpaceFile?>(null) }
+    var noteToDelete by remember { mutableStateOf<SubjectNote?>(null) }
+
+    var isFabExpanded by remember { mutableStateOf(false) }
+    var showNoteCreator by remember { mutableStateOf(false) }
+
+    val haptic = LocalHapticFeedback.current
+    val clipboardManager = LocalClipboardManager.current
 
     val filePicker =
         rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
@@ -482,9 +506,23 @@ fun SubjectSpaceScreen(
             .background(BlackBg)
             .statusBarsPadding()
     ) {
+        if (isFabExpanded) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.6f))
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) { isFabExpanded = false }
+                    .zIndex(10f)
+            )
+        }
+
         Column(modifier = Modifier.fillMaxSize()) {
             SimpleHeader(navController, subjectName)
-            if (files.isEmpty()) {
+
+            if (files.isEmpty() && notes.isEmpty()) {
                 Box(
                     modifier = Modifier
                         .weight(1f)
@@ -497,69 +535,146 @@ fun SubjectSpaceScreen(
                             null,
                             tint = Zinc500,
                             modifier = Modifier.size(64.dp)
-                        ); Spacer(modifier = Modifier.height(16.dp)); Text(
-                        Tr.get("no_materials", lang),
-                        color = Zinc500
-                    )
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(Tr.get("no_materials", lang), color = Zinc500)
                     }
                 }
             } else {
                 LazyColumn(
-                    contentPadding = PaddingValues(16.dp),
+                    contentPadding = PaddingValues(top = 16.dp, bottom = 100.dp, start = 16.dp, end = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(files) { file ->
-                        val isPlaying = playingAudioId == file.path
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { openFile(file) },
-                            colors = CardDefaults.cardColors(containerColor = Zinc900),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(16.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                    if (notes.isNotEmpty()) {
+                        item(key = "notes_header") {
+                            Text(
+                                text = Tr.get("notes", lang),
+                                color = Zinc500,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier
+                                    .animateItemPlacement(animationSpec = spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessLow))
+                                    .padding(bottom = 4.dp)
+                            )
+                        }
+                        items(items = notes, key = { it.id }) { note ->
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .animateItemPlacement(animationSpec = spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessLow))
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .combinedClickable(
+                                        onClick = {},
+                                        onLongClick = {
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            clipboardManager.setText(AnnotatedString(note.content))
+                                            Toast.makeText(context, Tr.get("copied", lang), Toast.LENGTH_SHORT).show()
+                                        }
+                                    ),
+                                colors = CardDefaults.cardColors(containerColor = Zinc800),
+                                shape = RoundedCornerShape(12.dp)
                             ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(40.dp)
-                                        .background(Zinc800, RoundedCornerShape(8.dp)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        when (file.type) {
-                                            FileType.IMAGE -> Icons.Outlined.Image; FileType.AUDIO -> if (isPlaying) Icons.Filled.Stop else Icons.Outlined.Audiotrack; FileType.PDF -> Icons.Outlined.PictureAsPdf; FileType.DOC -> Icons.Outlined.Description; else -> Icons.Outlined.InsertDriveFile
-                                        }, null, tint = if (isPlaying) RedDelete else Color.White
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = note.date,
+                                            color = Zinc500,
+                                            fontSize = 12.sp
+                                        )
+                                        IconButton(
+                                            onClick = { noteToDelete = note },
+                                            modifier = Modifier.size(24.dp)
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Delete,
+                                                contentDescription = "Delete",
+                                                tint = Zinc500,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        text = note.content,
+                                        color = Color.White.copy(alpha = 0.9f),
+                                        fontSize = 15.sp
                                     )
                                 }
-                                Spacer(modifier = Modifier.width(16.dp)); Column(
-                                modifier = Modifier.weight(
-                                    1f
-                                )
-                            ) {
-                                Text(
-                                    file.name,
-                                    color = Color.White,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                ); Text(file.sizeStr, color = Zinc500, fontSize = 12.sp)
                             }
-                                IconButton(onClick = { shareFile(file) }) {
-                                    Icon(
-                                        Icons.Default.Share,
-                                        "Share",
-                                        tint = Color.White,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
-                                IconButton(onClick = { fileToDelete = file }) {
-                                    Icon(
-                                        Icons.Default.Delete,
-                                        null,
-                                        tint = Zinc500,
-                                        modifier = Modifier.size(20.dp)
-                                    )
+                        }
+                    }
+
+                    if (files.isNotEmpty()) {
+                        item(key = "files_header") {
+                            Text(
+                                text = Tr.get("files", lang),
+                                color = Zinc500,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier
+                                    .animateItemPlacement(animationSpec = spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessLow))
+                                    .padding(top = 16.dp, bottom = 4.dp)
+                            )
+                        }
+                        items(items = files, key = { it.path }) { file ->
+                            val isPlaying = playingAudioId == file.path
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .animateItemPlacement(animationSpec = spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessLow))
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .clickable { openFile(file) },
+                                colors = CardDefaults.cardColors(containerColor = Zinc900),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(40.dp)
+                                            .background(Zinc800, RoundedCornerShape(8.dp)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            when (file.type) {
+                                                FileType.IMAGE -> Icons.Outlined.Image
+                                                FileType.AUDIO -> if (isPlaying) Icons.Filled.Stop else Icons.Outlined.Audiotrack
+                                                FileType.PDF -> Icons.Outlined.PictureAsPdf
+                                                FileType.DOC -> Icons.Outlined.InsertDriveFile
+                                                else -> Icons.Outlined.InsertDriveFile
+                                            }, null, tint = if (isPlaying) RedDelete else Color.White
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(16.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            file.name,
+                                            color = Color.White,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        Text("${file.sizeStr} • ${file.date}", color = Zinc500, fontSize = 12.sp)
+                                    }
+                                    IconButton(onClick = { shareFile(file) }) {
+                                        Icon(
+                                            Icons.Default.Share,
+                                            "Share",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                    IconButton(onClick = { fileToDelete = file }) {
+                                        Icon(
+                                            Icons.Default.Delete,
+                                            null,
+                                            tint = Zinc500,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -567,39 +682,209 @@ fun SubjectSpaceScreen(
                 }
             }
         }
-        FloatingActionButton(
-            onClick = { filePicker.launch(arrayOf("*/*")) },
+
+        Column(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(24.dp),
-            containerColor = BlackBg,
-            contentColor = Color.White,
-            shape = CircleShape
-        ) { Icon(Icons.Default.Add, "Upload") }
+                .padding(24.dp)
+                .zIndex(11f),
+            horizontalAlignment = Alignment.End,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            AnimatedVisibility(
+                visible = isFabExpanded,
+                enter = slideInVertically(initialOffsetY = { 50 }) + fadeIn(),
+                exit = slideOutVertically(targetOffsetY = { 50 }) + fadeOut()
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.End
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.End,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 16.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .background(Zinc900.copy(alpha = 0.8f), RoundedCornerShape(8.dp))
+                                .padding(horizontal = 12.dp, vertical = 6.dp)
+                        ) {
+                            Text(
+                                text = Tr.get("create_note", lang),
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .background(Zinc800, CircleShape)
+                                .clip(CircleShape)
+                                .clickable {
+                                    isFabExpanded = false
+                                    showNoteCreator = true
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Outlined.EditNote, contentDescription = null, tint = Color.White)
+                        }
+                    }
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.End,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 16.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .background(Zinc900.copy(alpha = 0.8f), RoundedCornerShape(8.dp))
+                                .padding(horizontal = 12.dp, vertical = 6.dp)
+                        ) {
+                            Text(
+                                text = Tr.get("upload_file", lang),
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .background(Zinc800, CircleShape)
+                                .clip(CircleShape)
+                                .clickable {
+                                    isFabExpanded = false
+                                    filePicker.launch(arrayOf("*/*"))
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Outlined.AttachFile, contentDescription = null, tint = Color.White)
+                        }
+                    }
+                }
+            }
+
+            FloatingActionButton(
+                onClick = { isFabExpanded = !isFabExpanded },
+                containerColor = BlackBg,
+                contentColor = Color.White,
+                shape = CircleShape
+            ) {
+                val rotation by animateFloatAsState(if (isFabExpanded) 45f else 0f)
+                Icon(
+                    Icons.Default.Add,
+                    contentDescription = "Add",
+                    modifier = Modifier.graphicsLayer { rotationZ = rotation }
+                )
+            }
+        }
+
+        if (showNoteCreator) {
+            var noteContent by remember { mutableStateOf("") }
+            val focusRequester = remember { FocusRequester() }
+
+            LaunchedEffect(Unit) {
+                focusRequester.requestFocus()
+            }
+
+            AlertDialog(
+                onDismissRequest = { showNoteCreator = false },
+                containerColor = Zinc900,
+                title = { Text(Tr.get("create_note", lang), color = Color.White) },
+                text = {
+                    BasicTextField(
+                        value = noteContent,
+                        onValueChange = { noteContent = it },
+                        textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 16.sp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(200.dp)
+                            .background(Zinc800, RoundedCornerShape(8.dp))
+                            .padding(12.dp)
+                            .focusRequester(focusRequester),
+                        decorationBox = { innerTextField ->
+                            if (noteContent.isEmpty()) Text(Tr.get("note_text", lang), color = Zinc500)
+                            innerTextField()
+                        }
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        if (noteContent.isNotBlank()) {
+                            val newNote = SubjectNote(
+                                id = System.currentTimeMillis(),
+                                subject = subjectName,
+                                content = noteContent,
+                                date = LocalDate.now().toString()
+                            )
+                            noteManager.saveNote(newNote)
+                            notes = noteManager.getNotes(subjectName)
+                        }
+                        showNoteCreator = false
+                    }) {
+                        Text(Tr.get("save", lang), color = Color.White)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showNoteCreator = false }) {
+                        Text(Tr.get("cancel", lang), color = Zinc500)
+                    }
+                }
+            )
+        }
+
         if (viewingImages != null) {
             ImageViewer(viewingImages!!.first, viewingImages!!.second) { viewingImages = null }
         }
+
         if (fileToDelete != null) {
             AlertDialog(
                 onDismissRequest = { fileToDelete = null },
-                title = { Text("Видалити?", color = Color.White) },
+                title = { Text(Tr.get("delete", lang) + "?", color = Color.White) },
                 text = { Text(fileToDelete!!.name, color = Zinc500) },
                 containerColor = Zinc900,
                 confirmButton = {
                     TextButton(onClick = {
-                        if (playingAudioId == fileToDelete!!.path) SimpleAudioPlayer.stop(); mySpaceManager.deleteFile(
-                        fileToDelete!!.path
-                    ); files = mySpaceManager.getFilesForSubject(subjectName); fileToDelete = null
-                    }) { Text("Так", color = RedDelete) }
+                        if (playingAudioId == fileToDelete!!.path) SimpleAudioPlayer.stop()
+                        mySpaceManager.deleteFile(fileToDelete!!.path)
+                        files = mySpaceManager.getFilesForSubject(subjectName)
+                        fileToDelete = null
+                    }) { Text(Tr.get("delete", lang), color = RedDelete) }
                 },
                 dismissButton = {
                     TextButton(onClick = { fileToDelete = null }) {
-                        Text(
-                            "Ні",
-                            color = Color.White
-                        )
+                        Text(Tr.get("cancel", lang), color = Color.White)
                     }
-                })
+                }
+            )
+        }
+
+        if (noteToDelete != null) {
+            AlertDialog(
+                onDismissRequest = { noteToDelete = null },
+                title = { Text(Tr.get("delete", lang) + "?", color = Color.White) },
+                text = { Text(Tr.get("create_note", lang), color = Zinc500) },
+                containerColor = Zinc900,
+                confirmButton = {
+                    TextButton(onClick = {
+                        noteManager.deleteNote(subjectName, noteToDelete!!.id)
+                        notes = noteManager.getNotes(subjectName)
+                        noteToDelete = null
+                    }) { Text(Tr.get("delete", lang), color = RedDelete) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { noteToDelete = null }) {
+                        Text(Tr.get("cancel", lang), color = Color.White)
+                    }
+                }
+            )
         }
     }
 }
