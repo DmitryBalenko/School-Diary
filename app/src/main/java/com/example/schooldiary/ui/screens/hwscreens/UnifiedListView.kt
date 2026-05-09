@@ -68,6 +68,7 @@ import com.example.schooldiary.Zinc900
 import com.example.schooldiary.ui.components.AsyncImagePreview
 import com.example.schooldiary.ui.components.ImageViewer
 import com.example.schooldiary.ui.components.TelegramAudioPlayer
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
 import java.time.LocalDate
@@ -145,204 +146,213 @@ fun ListViewContent(
                 items = displayItems,
                 key = { it.first.id }
             ) { (hw, isExtra, cleanDateStr) ->
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = Zinc900),
-                    shape = RoundedCornerShape(20.dp),
-                    border = if (isExtra) BorderStroke(1.dp, Color.White) else null,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .animateItemPlacement(
-                            animationSpec = tween(
-                                durationMillis = 400,
-                                easing = FastOutSlowInEasing
-                            )
+                var isVisible by remember { mutableStateOf(true) }
+
+                AnimatedVisibility(
+                    visible = isVisible,
+                    enter = fadeIn(tween(400)) + expandVertically(tween(400)),
+                    exit = shrinkVertically(tween(400)) + fadeOut(tween(400)),
+                    modifier = Modifier.animateItemPlacement(
+                        animationSpec = tween(
+                            durationMillis = 400,
+                            easing = FastOutSlowInEasing
                         )
+                    )
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        if (isExtra) {
-                            Row(modifier = Modifier.padding(bottom = 12.dp)) {
-                                Text(
-                                    text = Tr.get("extra_badge", lang),
-                                    color = Color.White,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            if (hw.icon.isNotBlank() && hw.icon != "📌") {
-                                Text(hw.icon, fontSize = 24.sp)
-                                Spacer(Modifier.width(12.dp))
-                            }
-                            Column {
-                                Text(
-                                    hw.subject,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White,
-                                    fontSize = 18.sp
-                                )
-
-                                val dateDisplay = try {
-                                    val date = LocalDate.parse(cleanDateStr)
-                                    val formatter =
-                                        java.time.format.DateTimeFormatter.ofPattern("dd.MM.YYYY")
-                                    " (${date.format(formatter)})"
-                                } catch (e: Exception) {
-                                    ""
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = Zinc900),
+                        shape = RoundedCornerShape(20.dp),
+                        border = if (isExtra) BorderStroke(1.dp, Color.White) else null,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            if (isExtra) {
+                                Row(modifier = Modifier.padding(bottom = 12.dp)) {
+                                    Text(
+                                        text = Tr.get("extra_badge", lang),
+                                        color = Color.White,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
                                 }
-
-                                Text(
-                                    "${Tr.get("recorded_on", lang)} ${
-                                        Tr.get(
-                                            hw.targetDay,
-                                            lang
-                                        )
-                                    }$dateDisplay",
-                                    color = Zinc500,
-                                    fontSize = 12.sp
-                                )
                             }
-                        }
 
-                        if (hw.text.isNotEmpty()) {
-                            Spacer(Modifier.height(12.dp))
-                            Text(hw.text, color = Color.White)
-                        }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                if (hw.icon.isNotBlank() && hw.icon != "📌") {
+                                    Text(hw.icon, fontSize = 24.sp)
+                                    Spacer(Modifier.width(12.dp))
+                                }
+                                Column {
+                                    Text(
+                                        hw.subject,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White,
+                                        fontSize = 18.sp
+                                    )
 
-                        hw.audioPath?.let { path ->
-                            Spacer(Modifier.height(8.dp))
-                            TelegramAudioPlayer(
-                                isPlaying = playingAudioId == hw.id,
-                                onPlayPause = {
-                                    if (playingAudioId == hw.id) {
-                                        SimpleAudioPlayer.stop(); playingAudioId = null
-                                    } else {
-                                        playingAudioId = hw.id; SimpleAudioPlayer.play(path) {
-                                            playingAudioId = null
-                                        }
+                                    val dateDisplay = try {
+                                        val date = LocalDate.parse(cleanDateStr)
+                                        val formatter =
+                                            java.time.format.DateTimeFormatter.ofPattern("dd.MM.YYYY")
+                                        " (${date.format(formatter)})"
+                                    } catch (e: Exception) {
+                                        ""
                                     }
-                                },
-                                onTranscribe = {
-                                    if (settingsManager.apiKey.isBlank()) {
-                                        Toast.makeText(
-                                            context,
-                                            Tr.get("no_api_key", lang),
-                                            Toast.LENGTH_LONG
-                                        ).show()
-                                    } else {
-                                        transcribingId = hw.id
-                                        coroutineScope.launch {
-                                            val transcript = GeminiClient.transcribeAudio(
-                                                File(path),
-                                                settingsManager.apiKey
+
+                                    Text(
+                                        "${Tr.get("recorded_on", lang)} ${
+                                            Tr.get(
+                                                hw.targetDay,
+                                                lang
                                             )
-                                            transcribingId = null
-                                            if (!transcript.isNullOrBlank()) {
-                                                val separator =
-                                                    if (hw.text.isNotEmpty()) "\n" else ""
-                                                val indexHw = hwList.indexOfFirst { it.id == hw.id }
-                                                if (indexHw != -1) {
-                                                    val newHw =
-                                                        hwList[indexHw].copy(text = hwList[indexHw].text + separator + transcript)
-                                                    hwList[indexHw] = newHw
-                                                    hwManager.updateHomework(newHw)
+                                        }$dateDisplay",
+                                        color = Zinc500,
+                                        fontSize = 12.sp
+                                    )
+                                }
+                            }
+
+                            if (hw.text.isNotEmpty()) {
+                                Spacer(Modifier.height(12.dp))
+                                Text(hw.text, color = Color.White)
+                            }
+
+                            hw.audioPath?.let { path ->
+                                Spacer(Modifier.height(8.dp))
+                                TelegramAudioPlayer(
+                                    isPlaying = playingAudioId == hw.id,
+                                    onPlayPause = {
+                                        if (playingAudioId == hw.id) {
+                                            SimpleAudioPlayer.stop(); playingAudioId = null
+                                        } else {
+                                            playingAudioId = hw.id; SimpleAudioPlayer.play(path) {
+                                                playingAudioId = null
+                                            }
+                                        }
+                                    },
+                                    onTranscribe = {
+                                        if (settingsManager.apiKey.isBlank()) {
+                                            Toast.makeText(
+                                                context,
+                                                Tr.get("no_api_key", lang),
+                                                Toast.LENGTH_LONG
+                                            ).show()
+                                        } else {
+                                            transcribingId = hw.id
+                                            coroutineScope.launch {
+                                                val transcript = GeminiClient.transcribeAudio(
+                                                    File(path),
+                                                    settingsManager.apiKey
+                                                )
+                                                transcribingId = null
+                                                if (!transcript.isNullOrBlank()) {
+                                                    val separator =
+                                                        if (hw.text.isNotEmpty()) "\n" else ""
+                                                    val indexHw = hwList.indexOfFirst { it.id == hw.id }
+                                                    if (indexHw != -1) {
+                                                        val newHw =
+                                                            hwList[indexHw].copy(text = hwList[indexHw].text + separator + transcript)
+                                                        hwList[indexHw] = newHw
+                                                        hwManager.updateHomework(newHw)
+                                                    }
                                                 }
                                             }
                                         }
-                                    }
-                                },
-                                isTranscribing = transcribingId == hw.id,
-                                lang = lang,
-                                isSaved = true
-                            )
-                        }
+                                    },
+                                    isTranscribing = transcribingId == hw.id,
+                                    lang = lang,
+                                    isSaved = true
+                                )
+                            }
 
-                        if (hw.imagePaths.isNotEmpty()) {
-                            Spacer(modifier = Modifier.height(12.dp))
-                            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                itemsIndexed(hw.imagePaths) { imgIdx, path ->
-                                    Box(
-                                        modifier = Modifier
-                                            .size(80.dp)
-                                            .clip(RoundedCornerShape(12.dp))
-                                    ) {
-                                        AsyncImagePreview(path) {
-                                            viewingImages = Pair(hw.imagePaths, imgIdx)
+                            if (hw.imagePaths.isNotEmpty()) {
+                                Spacer(modifier = Modifier.height(12.dp))
+                                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    itemsIndexed(hw.imagePaths) { imgIdx, path ->
+                                        Box(
+                                            modifier = Modifier
+                                                .size(80.dp)
+                                                .clip(RoundedCornerShape(12.dp))
+                                        ) {
+                                            AsyncImagePreview(path) {
+                                                viewingImages = Pair(hw.imagePaths, imgIdx)
+                                            }
                                         }
                                     }
                                 }
                             }
-                        }
 
-                        Spacer(Modifier.height(12.dp))
+                            Spacer(Modifier.height(12.dp))
 
-                        AnimatedVisibility(
-                            visible = isOverdue(hw),
-                            enter = fadeIn() + expandVertically(),
-                            exit = fadeOut() + shrinkVertically()
-                        ) {
-                            val nextDayKey =
-                                getNextLessonDay(hw.subject, currentSchedule, isTransfer = true)
-                            val nextDayTranslated = Tr.get(nextDayKey, lang)
+                            AnimatedVisibility(
+                                visible = isOverdue(hw),
+                                enter = fadeIn() + expandVertically(),
+                                exit = fadeOut() + shrinkVertically()
+                            ) {
+                                val nextDayKey =
+                                    getNextLessonDay(hw.subject, currentSchedule, isTransfer = true)
+                                val nextDayTranslated = Tr.get(nextDayKey, lang)
 
-                            val textWithoutEmoji =
-                                Tr.get("overdue_transfer", lang).replace("⚠️ ", "")
-                                    .replace("⚠️", "")
+                                val textWithoutEmoji =
+                                    Tr.get("overdue_transfer", lang).replace("⚠️ ", "")
+                                        .replace("⚠️", "")
 
-                            val buttonText = if (nextDayKey == "UNKNOWN") {
-                                Tr.get("overdue_pick_date", lang)
-                            } else {
-                                "$textWithoutEmoji $nextDayTranslated?"
+                                val buttonText = if (nextDayKey == "UNKNOWN") {
+                                    Tr.get("overdue_pick_date", lang)
+                                } else {
+                                    "$textWithoutEmoji $nextDayTranslated?"
+                                }
+
+                                OutlinedButton(
+                                    onClick = {
+                                        if (nextDayKey == "UNKNOWN") onTransferCustom(hw) else onTransfer(
+                                            hw
+                                        )
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .wrapContentHeight()
+                                        .padding(vertical = 4.dp),
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = ButtonDefaults.outlinedButtonColors(
+                                        contentColor = Color.White.copy(
+                                            alpha = 0.7f
+                                        )
+                                    ),
+                                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.3f))
+                                ) {
+                                    Text(
+                                        text = buttonText,
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
                             }
 
-                            OutlinedButton(
+                            Button(
                                 onClick = {
-                                    if (nextDayKey == "UNKNOWN") onTransferCustom(hw) else onTransfer(
-                                        hw
-                                    )
+                                    isVisible = false
+                                    coroutineScope.launch {
+                                        delay(400) // Чекаємо завершення анімації зникнення
+                                        if (playingAudioId == hw.id) SimpleAudioPlayer.stop()
+                                        hwManager.archiveHomework(hw.id)
+                                        val idx = hwList.indexOfFirst { it.id == hw.id }
+                                        if (idx != -1) {
+                                            hwList[idx] = hwList[idx].copy(isArchived = true)
+                                        }
+                                    }
                                 },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color.White,
+                                    contentColor = Color.Black
+                                ),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .wrapContentHeight()
                                     .padding(vertical = 4.dp),
-                                shape = RoundedCornerShape(12.dp),
-                                colors = ButtonDefaults.outlinedButtonColors(
-                                    contentColor = Color.White.copy(
-                                        alpha = 0.7f
-                                    )
-                                ),
-                                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.3f))
+                                shape = RoundedCornerShape(12.dp)
                             ) {
-                                Text(
-                                    text = buttonText,
-                                    textAlign = TextAlign.Center
-                                )
+                                Text(Tr.get("done", lang), fontWeight = FontWeight.Bold)
                             }
-                        }
-
-                        Button(
-                            onClick = {
-                                coroutineScope.launch {
-                                    if (playingAudioId == hw.id) SimpleAudioPlayer.stop()
-                                    hwManager.archiveHomework(hw.id)
-                                    val idx = hwList.indexOfFirst { it.id == hw.id }
-                                    if (idx != -1) {
-                                        hwList[idx] = hwList[idx].copy(isArchived = true)
-                                    }
-                                }
-                            },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color.White,
-                                contentColor = Color.Black
-                            ),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .wrapContentHeight()
-                                .padding(vertical = 4.dp),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Text(Tr.get("done", lang), fontWeight = FontWeight.Bold)
                         }
                     }
                 }

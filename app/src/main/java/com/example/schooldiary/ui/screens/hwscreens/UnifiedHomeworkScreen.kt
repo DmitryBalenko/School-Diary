@@ -122,7 +122,7 @@ fun UnifiedHomeworkScreen(
     val screenWidthPx = context.resources.displayMetrics.widthPixels.toFloat()
     val triggerThreshold = -screenWidthPx * 0.22f
 
-    val hwList = remember { mutableStateListOf<Homework>() }
+    val hwList = remember { mutableStateListOf<Homework>().apply { addAll(hwManager.getHomeworkList()) } }
     val currentSchedule = remember { scheduleManager.getSchedule() }
     val bells = remember { bellManager.getBells() }
 
@@ -147,11 +147,6 @@ fun UnifiedHomeworkScreen(
         } else if (!isPastThreshold) {
             hasVibrated = false
         }
-    }
-
-    LaunchedEffect(Unit) {
-        hwList.clear()
-        hwList.addAll(hwManager.getHomeworkListAsync())
     }
 
     val onTransferHw = { hw: Homework ->
@@ -219,6 +214,7 @@ fun UnifiedHomeworkScreen(
                 .fillMaxSize()
                 .offset { IntOffset(offsetX.value.roundToInt(), 0) }
                 .background(BlackBg)
+                .zIndex(1f)
                 .draggable(
                     state = rememberDraggableState { delta ->
                         val newOffset = (offsetX.value + delta).coerceAtMost(0f)
@@ -290,13 +286,13 @@ fun UnifiedHomeworkScreen(
                 .fillMaxWidth()
                 .height(120.dp)
                 .align(Alignment.TopCenter)
+                .zIndex(10f)
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(
-                            BlackBg, BlackBg, BlackBg.copy(alpha = 0.98f),
-                            BlackBg.copy(alpha = 0.89f), BlackBg.copy(alpha = 0.8f),
-                            BlackBg.copy(alpha = 0.65f), BlackBg.copy(alpha = 0.45f),
-                            BlackBg.copy(alpha = 0.25f), BlackBg.copy(alpha = 0.15f),
+                            BlackBg,
+                            BlackBg.copy(alpha = 0.8f),
+                            BlackBg.copy(alpha = 0.3f),
                             Color.Transparent
                         )
                     )
@@ -308,7 +304,7 @@ fun UnifiedHomeworkScreen(
                 .fillMaxWidth()
                 .align(Alignment.TopCenter)
                 .padding(16.dp)
-                .zIndex(2f),
+                .zIndex(11f),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {

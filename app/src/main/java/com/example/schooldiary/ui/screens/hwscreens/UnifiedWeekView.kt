@@ -33,6 +33,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -114,25 +115,25 @@ fun WeekViewContent(
                 else if (hasSun) 6
                 else 0
             }
-
             "SATURDAY" -> {
-                if (currentHour < 16 && hasSat) 5
-                else if (hasSun) 6
+                // После 16:00 переводим фокус на воскресенье ТОЛЬКО если там есть ДЗ.
+                // Иначе - остаемся на субботе (чтобы карточка не пропала), если на ней есть ДЗ.
+                if (currentHour >= 16 && hasSun) 6
+                else if (hasSat) 5
                 else 0
             }
-
             "SUNDAY" -> {
-                if (currentHour < 16 && hasSun) 6
+                // В воскресенье всегда остаемся на месте, если есть ДЗ, чтобы оно не исчезло вечером.
+                if (hasSun) 6
                 else 0
             }
-
             else -> 0
         }
 
+        // Неделя сдвигается вперед ТОЛЬКО если фокус перешел на понедельник (0)
+        // в пятницу, субботу или воскресенье. В противном случае остаемся на текущей неделе!
         val shiftToNextWeek = when (currentDayStr) {
-            "FRIDAY" -> currentHour >= 16 && !hasSat && !hasSun
-            "SATURDAY" -> currentHour >= 16 && !hasSun || (!hasSat && !hasSun)
-            "SUNDAY" -> currentHour >= 16 || (!hasSun)
+            "FRIDAY", "SATURDAY", "SUNDAY" -> targetIdx == 0
             else -> false
         }
 
@@ -146,6 +147,7 @@ fun WeekViewContent(
     }
 
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = targetIndex)
+
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
     val hwManager = remember { HomeworkManager(context.applicationContext) }
@@ -177,11 +179,18 @@ fun WeekViewContent(
             AnimatedVisibility(
                 visible = isVisible,
                 enter = fadeIn(tween(400)) + expandVertically(tween(400)),
-                exit = fadeOut(tween(400)) + shrinkVertically(tween(400))
+                exit = fadeOut(animationSpec = tween(400)) +
+                        shrinkVertically(
+                            animationSpec = tween(400),
+                            shrinkTowards = Alignment.Top
+                        )
             ) {
                 Box(modifier = Modifier.padding(bottom = 24.dp)) {
                     val dayOffset = index.toLong()
                     val sectionDate = startOfWeek.plusDays(dayOffset)
+                    val realToday = todayDateObj.toEpochDay()
+                    val sectionEpoch = sectionDate.toEpochDay()
+                    val daysDiff = sectionEpoch - realToday
 
                     DaySection(
                         dayName = Tr.get(dayKey, lang),
@@ -191,9 +200,9 @@ fun WeekViewContent(
                         sectionDate = sectionDate,
                         currentSchedule = currentSchedule,
                         bells = bells,
-                        isToday = (index == todayIndex && !isAfter16),
-                        isTomorrow = (index == targetIndex && index != todayIndex),
+                        daysDiff = daysDiff,
                         isFocused = (index == targetIndex),
+                        isAfter16 = isAfter16,
                         playingAudioId = playingAudioId,
                         transcribingId = transcribingId,
                         onPlayAudio = { id, path ->
@@ -269,9 +278,9 @@ fun DaySection(
     sectionDate: LocalDate,
     currentSchedule: Map<String, List<Lesson>>,
     bells: List<BellTime>,
-    isToday: Boolean,
-    isTomorrow: Boolean,
+    daysDiff: Long,
     isFocused: Boolean,
+    isAfter16: Boolean,
     playingAudioId: Long?,
     transcribingId: Long?,
     onPlayAudio: (Long, String) -> Unit,
@@ -352,20 +361,19 @@ fun DaySection(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(dayName, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
 
-                if (isToday) {
+                val badgeText = if (isFocused) {
+                    when {
+                        daysDiff == 0L && !isAfter16 -> Tr.get("today", lang)
+                        daysDiff == 1L -> Tr.get("tomorrow", lang)
+                        daysDiff == 2L -> Tr.get("day_after_tomorrow", lang)
+                        dayKey == "MONDAY" -> Tr.get("start_of_week", lang)
+                        else -> null
+                    }
+                } else null
+
+                if (badgeText != null) {
                     Text(
-                        text = " ${Tr.get("today", lang)}",
-                        fontSize = 10.sp,
-                        color = Color.Black,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier
-                            .padding(start = 8.dp)
-                            .background(Color.White, RoundedCornerShape(4.dp))
-                            .padding(horizontal = 4.dp, vertical = 2.dp)
-                    )
-                } else if (isTomorrow) {
-                    Text(
-                        text = " ${Tr.get("tomorrow", lang)}",
+                        text = " $badgeText",
                         fontSize = 10.sp,
                         color = Color.Black,
                         fontWeight = FontWeight.Bold,

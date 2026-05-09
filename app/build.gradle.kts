@@ -19,7 +19,7 @@ android {
         applicationId = "com.bymrd1mm.schooldiary"
         minSdk = 26
         targetSdk = 34
-        versionCode = 33
+        versionCode = 34
         versionName = "3.7.5"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
