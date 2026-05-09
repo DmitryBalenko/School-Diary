@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowForwardIos
@@ -32,6 +33,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -42,6 +45,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
@@ -97,6 +101,9 @@ fun WriteHomeworkScreen(
     var customIcon by remember { mutableStateOf("") }
     var showEmojiPicker by remember { mutableStateOf(false) }
 
+    val focusRequester = remember { FocusRequester() }
+    val customInteractionSource = remember { MutableInteractionSource() }
+
     val showAudioPlayer by remember(selectedImages.size, audioFile, isKeyboardOpen) {
         derivedStateOf {
             if (audioFile == null) false
@@ -120,7 +127,7 @@ fun WriteHomeworkScreen(
         if (isRecording) { audioRecorder.stopRecording(); isRecording = false }
 
         val finalSubject = if (isCustomSubject) customSubjectName.trim() else subject
-        val finalIcon = if (isCustomSubject) (if (customIcon.isBlank()) "📌" else customIcon) else icon
+        val finalIcon = if (isCustomSubject) customIcon else icon
 
         val targetDayName: String
         val targetDateReal: String
@@ -175,15 +182,28 @@ fun WriteHomeworkScreen(
                                 if (customIcon.isBlank()) Icon(Icons.Default.Add, null, tint = Zinc500) else Text(customIcon, fontSize = 24.sp)
                             }
                             Spacer(modifier = Modifier.width(12.dp))
-                            Column(modifier = Modifier.weight(1f)) {
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable(
+                                        interactionSource = customInteractionSource,
+                                        indication = null
+                                    ) {
+                                        focusRequester.requestFocus()
+                                    }
+                            ) {
                                 BasicTextField(
                                     value = customSubjectName,
                                     onValueChange = { customSubjectName = it },
                                     textStyle = TextStyle(color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp),
                                     cursorBrush = SolidColor(Color.White),
                                     singleLine = true,
+                                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .focusRequester(focusRequester),
                                     decorationBox = { inner ->
-                                        Box {
+                                        Box(contentAlignment = Alignment.CenterStart) {
                                             if (customSubjectName.isEmpty()) Text(Tr.get("custom_subject_hint", lang), color = Zinc500, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                                             inner()
                                         }
@@ -271,7 +291,21 @@ fun WriteHomeworkScreen(
                     val saveBtnBg by animateColorAsState(if (canSave) Color.White else Color.Transparent, tween(300), label = "bg")
                     val saveBtnIconColor by animateColorAsState(if (canSave) Color.Black else Zinc700, tween(300), label = "icon")
 
-                    Box(modifier = Modifier.weight(1f).height(56.dp).clip(RoundedCornerShape(16.dp)).background(saveBtnBg).border(1.dp, if (canSave) Color.Transparent else Zinc700.copy(0.3f), RoundedCornerShape(16.dp)).combinedClickable(enabled = canSave, onClick = { saveHomeworkToDate() }, onLongClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); focusManager.clearFocus(); showDaySelector = true }), contentAlignment = Alignment.Center) { Icon(Icons.Outlined.Check, null, tint = saveBtnIconColor) }
+                    Box(
+                        modifier = Modifier.weight(1f).height(56.dp).clip(RoundedCornerShape(16.dp)).background(saveBtnBg).border(1.dp, if (canSave) Color.Transparent else Zinc700.copy(0.3f), RoundedCornerShape(16.dp)).combinedClickable(
+                            enabled = canSave,
+                            onClick = {
+                                if (isCustomSubject) {
+                                    focusManager.clearFocus()
+                                    showDaySelector = true
+                                } else {
+                                    saveHomeworkToDate()
+                                }
+                            },
+                            onLongClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); focusManager.clearFocus(); showDaySelector = true }
+                        ),
+                        contentAlignment = Alignment.Center
+                    ) { Icon(Icons.Outlined.Check, null, tint = saveBtnIconColor) }
                 }
             }
         }
@@ -302,10 +336,27 @@ fun WriteHomeworkScreen(
             val datePickerState = rememberDatePickerState()
             DatePickerDialog(
                 onDismissRequest = { showDatePicker = false },
-                confirmButton = { TextButton(onClick = { datePickerState.selectedDateMillis?.let { saveHomeworkToDate(exactDate = Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate()) }; showDatePicker = false }) { Text(Tr.get("save", lang), color = BlueAction) } },
-                dismissButton = { TextButton(onClick = { showDatePicker = false }) { Text(Tr.get("cancel", lang), color = Zinc500) } },
-                colors = DatePickerDefaults.colors(containerColor = Zinc900)
-            ) { DatePicker(state = datePickerState, colors = DatePickerDefaults.colors(titleContentColor = Color.White, headlineContentColor = Color.White, weekdayContentColor = Zinc500, dayContentColor = Color.White, selectedDayContainerColor = BlueAction, todayContentColor = BlueAction, todayDateBorderColor = BlueAction)) }
+                confirmButton = { TextButton(onClick = { datePickerState.selectedDateMillis?.let { saveHomeworkToDate(exactDate = Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate()) }; showDatePicker = false }, colors = ButtonDefaults.textButtonColors(contentColor = Color.White)) { Text(Tr.get("save", lang)) } },
+                dismissButton = { TextButton(onClick = { showDatePicker = false }, colors = ButtonDefaults.textButtonColors(contentColor = Zinc500)) { Text(Tr.get("cancel", lang)) } },
+                tonalElevation = 0.dp
+            ) {
+                DatePicker(
+                    state = datePickerState,
+                    colors = DatePickerDefaults.colors(
+                        containerColor = Zinc900,
+                        titleContentColor = Color.White,
+                        headlineContentColor = Color.White,
+                        weekdayContentColor = Zinc500,
+                        dayContentColor = Color.White,
+                        selectedDayContainerColor = Color.White,
+                        selectedDayContentColor = Color.Black,
+                        todayContentColor = Color.White,
+                        todayDateBorderColor = Zinc500,
+                        selectedYearContainerColor = Color.White,
+                        selectedYearContentColor = Color.Black
+                    )
+                )
+            }
         }
 
         if (showEmojiPicker) EmojiPickerDialog(onDismiss = { showEmojiPicker = false }, onEmojiSelected = { customIcon = it; showEmojiPicker = false }, lang = lang)

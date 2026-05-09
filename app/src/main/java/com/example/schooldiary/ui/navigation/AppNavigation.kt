@@ -30,7 +30,7 @@ import com.example.schooldiary.ui.screens.MySpaceScreen
 import com.example.schooldiary.ui.screens.SettingsMainScreen
 import com.example.schooldiary.ui.screens.SubjectSelectScreen
 import com.example.schooldiary.ui.screens.SubjectSpaceScreen
-import com.example.schooldiary.ui.screens.UnifiedHomeworkScreen
+import com.example.schooldiary.ui.screens.hwscreens.UnifiedHomeworkScreen
 import com.example.schooldiary.ui.screens.WriteHomeworkScreen
 
 @Composable

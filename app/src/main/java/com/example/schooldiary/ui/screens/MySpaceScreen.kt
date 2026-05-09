@@ -542,7 +542,12 @@ fun SubjectSpaceScreen(
                 }
             } else {
                 LazyColumn(
-                    contentPadding = PaddingValues(top = 16.dp, bottom = 100.dp, start = 16.dp, end = 16.dp),
+                    contentPadding = PaddingValues(
+                        top = 16.dp,
+                        bottom = 100.dp,
+                        start = 16.dp,
+                        end = 16.dp
+                    ),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     if (notes.isNotEmpty()) {
@@ -552,7 +557,12 @@ fun SubjectSpaceScreen(
                                 color = Zinc500,
                                 fontWeight = FontWeight.Bold,
                                 modifier = Modifier
-                                    .animateItemPlacement(animationSpec = spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessLow))
+                                    .animateItemPlacement(
+                                        animationSpec = spring(
+                                            dampingRatio = 0.8f,
+                                            stiffness = Spring.StiffnessLow
+                                        )
+                                    )
                                     .padding(bottom = 4.dp)
                             )
                         }
@@ -560,14 +570,23 @@ fun SubjectSpaceScreen(
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .animateItemPlacement(animationSpec = spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessLow))
+                                    .animateItemPlacement(
+                                        animationSpec = spring(
+                                            dampingRatio = 0.8f,
+                                            stiffness = Spring.StiffnessLow
+                                        )
+                                    )
                                     .clip(RoundedCornerShape(12.dp))
                                     .combinedClickable(
                                         onClick = {},
                                         onLongClick = {
                                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                             clipboardManager.setText(AnnotatedString(note.content))
-                                            Toast.makeText(context, Tr.get("copied", lang), Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(
+                                                context,
+                                                Tr.get("copied", lang),
+                                                Toast.LENGTH_SHORT
+                                            ).show()
                                         }
                                     ),
                                 colors = CardDefaults.cardColors(containerColor = Zinc800),
@@ -614,7 +633,12 @@ fun SubjectSpaceScreen(
                                 color = Zinc500,
                                 fontWeight = FontWeight.Bold,
                                 modifier = Modifier
-                                    .animateItemPlacement(animationSpec = spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessLow))
+                                    .animateItemPlacement(
+                                        animationSpec = spring(
+                                            dampingRatio = 0.8f,
+                                            stiffness = Spring.StiffnessLow
+                                        )
+                                    )
                                     .padding(top = 16.dp, bottom = 4.dp)
                             )
                         }
@@ -623,7 +647,12 @@ fun SubjectSpaceScreen(
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .animateItemPlacement(animationSpec = spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessLow))
+                                    .animateItemPlacement(
+                                        animationSpec = spring(
+                                            dampingRatio = 0.8f,
+                                            stiffness = Spring.StiffnessLow
+                                        )
+                                    )
                                     .clip(RoundedCornerShape(12.dp))
                                     .clickable { openFile(file) },
                                 colors = CardDefaults.cardColors(containerColor = Zinc900),
@@ -646,7 +675,9 @@ fun SubjectSpaceScreen(
                                                 FileType.PDF -> Icons.Outlined.PictureAsPdf
                                                 FileType.DOC -> Icons.Outlined.InsertDriveFile
                                                 else -> Icons.Outlined.InsertDriveFile
-                                            }, null, tint = if (isPlaying) RedDelete else Color.White
+                                            },
+                                            null,
+                                            tint = if (isPlaying) RedDelete else Color.White
                                         )
                                     }
                                     Spacer(modifier = Modifier.width(16.dp))
@@ -657,7 +688,11 @@ fun SubjectSpaceScreen(
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis
                                         )
-                                        Text("${file.sizeStr} • ${file.date}", color = Zinc500, fontSize = 12.sp)
+                                        Text(
+                                            "${file.sizeStr} • ${file.date}",
+                                            color = Zinc500,
+                                            fontSize = 12.sp
+                                        )
                                     }
                                     IconButton(onClick = { shareFile(file) }) {
                                         Icon(
@@ -730,7 +765,11 @@ fun SubjectSpaceScreen(
                                 },
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(Icons.Outlined.EditNote, contentDescription = null, tint = Color.White)
+                            Icon(
+                                Icons.Outlined.EditNote,
+                                contentDescription = null,
+                                tint = Color.White
+                            )
                         }
                     }
 
@@ -765,7 +804,11 @@ fun SubjectSpaceScreen(
                                 },
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(Icons.Outlined.AttachFile, contentDescription = null, tint = Color.White)
+                            Icon(
+                                Icons.Outlined.AttachFile,
+                                contentDescription = null,
+                                tint = Color.White
+                            )
                         }
                     }
                 }
@@ -802,7 +845,10 @@ fun SubjectSpaceScreen(
                     BasicTextField(
                         value = noteContent,
                         onValueChange = { noteContent = it },
-                        textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 16.sp),
+                        textStyle = androidx.compose.ui.text.TextStyle(
+                            color = Color.White,
+                            fontSize = 16.sp
+                        ),
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(200.dp)
@@ -810,7 +856,10 @@ fun SubjectSpaceScreen(
                             .padding(12.dp)
                             .focusRequester(focusRequester),
                         decorationBox = { innerTextField ->
-                            if (noteContent.isEmpty()) Text(Tr.get("note_text", lang), color = Zinc500)
+                            if (noteContent.isEmpty()) Text(
+                                Tr.get("note_text", lang),
+                                color = Zinc500
+                            )
                             innerTextField()
                         }
                     )

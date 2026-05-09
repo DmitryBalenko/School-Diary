@@ -23,6 +23,7 @@ object Tr {
             "extra_tasks" to "📌 Додаткові завдання",
             "export" to "Експорт",
             "import" to "Імпорт",
+            "overdue_pick_date" to "Прострочено. Обрати дату?",
             "export_success" to "Успішно експортовано!",
             "import_success" to "Дані відновлено! Перезапустіть додаток.",
             "error_save" to "Помилка збереження",
@@ -113,6 +114,7 @@ object Tr {
             "view_hw" to "Посмотреть ДЗ",
             "active_tasks" to "Активных:",
             "SATURDAY" to "Суббота",
+            "overdue_pick_date" to "Просрочено. Выбрать дату?",
             "SUNDAY" to "Воскресенье",
             "my_space" to "My Space",
             "settings" to "Настройки",
@@ -210,6 +212,7 @@ object Tr {
             "SATURDAY" to "Saturday",
             "SUNDAY" to "Sunday",
             "today" to "TODAY",
+            "overdue_pick_date" to "Overdue. Pick date?",
             "export" to "Export",
             "import" to "Import",
             "export_success" to "Successfully exported!",
@@ -309,7 +312,38 @@ val BlueCalendar = Color(0xFF4a90e2)
 
 // --- НАБІР ЕМОДЗІ ---
 val availableEmojis = listOf(
-    "📚", "📐", "🧪", "🇬🇧", "🎨", "🤸", "⚛️", "🗣️", "✍️", "🌎", "🌱", "🛡️", "💰", "🗺️", "💻", "📖", "📏", "🎼", "⚽", "🏊", "💃", "🧠", "🔨", "🍳", "🩺", "⚖️", "🎭", "🎬", "🎤", "🦠", "🧬", "🔭"
+    "📚",
+    "📐",
+    "🧪",
+    "🇬🇧",
+    "🎨",
+    "🤸",
+    "⚛️",
+    "🗣️",
+    "✍️",
+    "🌎",
+    "🌱",
+    "🛡️",
+    "💰",
+    "🗺️",
+    "💻",
+    "📖",
+    "📏",
+    "🎼",
+    "⚽",
+    "🏊",
+    "💃",
+    "🧠",
+    "🔨",
+    "🍳",
+    "🩺",
+    "⚖️",
+    "🎭",
+    "🎬",
+    "🎤",
+    "🦠",
+    "🧬",
+    "🔭"
 )
 
 // --- МОДЕЛІ ---
@@ -342,7 +376,14 @@ data class SubjectNote(
     val date: String
 )
 
-data class SpaceFile(val name: String, val path: String, val type: FileType, val sizeStr: String, val date: String)
+data class SpaceFile(
+    val name: String,
+    val path: String,
+    val type: FileType,
+    val sizeStr: String,
+    val date: String
+)
+
 enum class FileType { IMAGE, AUDIO, PDF, DOC, OTHER }
 data class BellTime(val id: Int, var start: String, var end: String)
 

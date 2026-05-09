@@ -19,8 +19,8 @@ android {
         applicationId = "com.bymrd1mm.schooldiary"
         minSdk = 26
         targetSdk = 34
-        versionCode = 32
-        versionName = "3.7.5 β"
+        versionCode = 33
+        versionName = "3.7.5"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
