@@ -33,7 +33,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -92,10 +91,18 @@ fun WeekViewContent(
     val thisSundayStr = mondayDateObj.plusDays(6).toString()
 
     val hasSat by remember(hwList) {
-        derivedStateOf { hwList.any { !it.isArchived && it.targetDate?.trim()?.substringBefore("T") == thisSaturdayStr } }
+        derivedStateOf {
+            hwList.any {
+                !it.isArchived && it.targetDate?.trim()?.substringBefore("T") == thisSaturdayStr
+            }
+        }
     }
     val hasSun by remember(hwList) {
-        derivedStateOf { hwList.any { !it.isArchived && it.targetDate?.trim()?.substringBefore("T") == thisSundayStr } }
+        derivedStateOf {
+            hwList.any {
+                !it.isArchived && it.targetDate?.trim()?.substringBefore("T") == thisSundayStr
+            }
+        }
     }
 
     val (targetIndex, todayIndex, isAfter16, startOfWeek) = remember(hasSat, hasSun) {
@@ -115,23 +122,26 @@ fun WeekViewContent(
                 else if (hasSun) 6
                 else 0
             }
+
             "SATURDAY" -> {
-                // После 16:00 переводим фокус на воскресенье ТОЛЬКО если там есть ДЗ.
-                // Иначе - остаемся на субботе (чтобы карточка не пропала), если на ней есть ДЗ.
+                // Після 16:00 переводимо фокус на неділю ТІЛЬКИ якщо там є ДЗ.
+                // Інакше - залишаємось на суботі (щоб картка не пропала), якщо на ній є ДЗ.
                 if (currentHour >= 16 && hasSun) 6
                 else if (hasSat) 5
                 else 0
             }
+
             "SUNDAY" -> {
-                // В воскресенье всегда остаемся на месте, если есть ДЗ, чтобы оно не исчезло вечером.
+                // У неділю завжди залишаємось на місці, якщо є ДЗ, щоб воно не зникло ввечері.
                 if (hasSun) 6
                 else 0
             }
+
             else -> 0
         }
 
-        // Неделя сдвигается вперед ТОЛЬКО если фокус перешел на понедельник (0)
-        // в пятницу, субботу или воскресенье. В противном случае остаемся на текущей неделе!
+        // Неділя зсувається вперед ТІЛЬКИ якщо фокус перейшов на понеділок (0)
+        // у п'ятницю, суботу або неділю. В іншому випадку залишаємось на поточному тижні!
         val shiftToNextWeek = when (currentDayStr) {
             "FRIDAY", "SATURDAY", "SUNDAY" -> targetIdx == 0
             else -> false
@@ -299,9 +309,24 @@ fun DaySection(
     fun findHomeworks(subject: String): List<Homework> {
         val subjectHwList = hwMap[subject.trim()] ?: return emptyList()
         return subjectHwList.filter { hw ->
-            val isCorrectDay =
+            val tDateStr = hw.targetDate?.trim() ?: ""
+
+            val isCorrectDate = if (tDateStr.isNotEmpty()) {
+                try {
+                    val cleanStr =
+                        if (tDateStr.contains("T")) tDateStr.substringBefore("T") else tDateStr.substringBefore(
+                            " "
+                        )
+                    cleanStr == sectionDate.toString()
+                } catch (e: Exception) {
+                    false
+                }
+            } else {
+                // Fallback для старих завдань без targetDate
                 hw.targetDay == dayKey || Tr.data.values.any { langMap -> langMap[dayKey] == hw.targetDay }
-            if (!isCorrectDay) return@filter false
+            }
+
+            if (!isCorrectDate) return@filter false
 
             if (isOverdue(hw)) {
                 val nextDay = getNextLessonDay(hw.subject, currentSchedule, isTransfer = true)
