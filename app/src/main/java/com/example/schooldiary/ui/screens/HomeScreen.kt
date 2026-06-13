@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -135,18 +136,39 @@ fun HomeScreen(navController: NavController, hwManager: HomeworkManager, lang: S
                     .fillMaxWidth()
                     .height(140.dp)
             ) {
-                Column(modifier = Modifier.align(Alignment.CenterStart)) {
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.SpaceBetween,
+                    horizontalAlignment = Alignment.Start
+                ) {
                     Text(
                         "✏️",
                         fontSize = 32.sp
-                    ); Spacer(modifier = Modifier.height(12.dp)); Text(
-                    Tr.get("write_hw", lang),
-                    color = Color.White,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold
-                ); Text(
-                    Tr.get("add_new_task", lang), color = Zinc500, fontSize = 13.sp
-                )
+                    )
+                    Column {
+                        Text(
+                            text = Tr.get("write_hw", lang),
+                            color = Color.White,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            style = TextStyle(
+                                platformStyle = androidx.compose.ui.text.PlatformTextStyle(
+                                    includeFontPadding = false
+                                )
+                            )
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = Tr.get("add_new_task", lang),
+                            color = Zinc500,
+                            fontSize = 13.sp,
+                            style = TextStyle(
+                                platformStyle = androidx.compose.ui.text.PlatformTextStyle(
+                                    includeFontPadding = false
+                                )
+                            )
+                        )
+                    }
                 }
             }
 
@@ -192,10 +214,11 @@ fun HomeScreen(navController: NavController, hwManager: HomeworkManager, lang: S
                             Box(
                                 contentAlignment = Alignment.Center,
                                 modifier = Modifier
+                                    .offset(y = 1.5.dp) // Оптична компенсація: опускаємо бейдж до центру малих літер
                                     .height(24.dp)
                                     .defaultMinSize(minWidth = 24.dp)
-                                    .background(Zinc700, shape = RoundedCornerShape(percent = 50))
-                                    .padding(horizontal = 8.dp)
+                                    .background(Zinc700, shape = CircleShape)
+                                    .padding(horizontal = 6.dp)
                             ) {
                                 Text(
                                     text = "$hwCount",
@@ -203,6 +226,7 @@ fun HomeScreen(navController: NavController, hwManager: HomeworkManager, lang: S
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
                                     textAlign = TextAlign.Center,
+                                    modifier = Modifier.offset(y = (-1).dp), // Внутрішня компенсація шрифту залишається!
                                     style = TextStyle(
                                         platformStyle = androidx.compose.ui.text.PlatformTextStyle(
                                             includeFontPadding = false
@@ -238,8 +262,8 @@ fun HomeScreen(navController: NavController, hwManager: HomeworkManager, lang: S
                         drawRect(
                             brush = Brush.radialGradient(
                                 colors = listOf(
-                                    Color(0xFF2C2C2E),
-                                    Color(0xFF1C1C1E)
+                                    Zinc700,
+                                    Zinc900
                                 ),
                                 center = Offset(size.width * 0.8f, size.height * 0.2f),
                                 radius = size.width * 0.8f
@@ -257,25 +281,32 @@ fun HomeScreen(navController: NavController, hwManager: HomeworkManager, lang: S
                             center = it
                         )
                     }
-                    }; Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(24.dp),
-                    contentAlignment = Alignment.CenterStart
-                ) {
-                    Text(
-                        text = Tr.get("my_space", lang),
-                        color = Color.White,
-                        fontSize = 32.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.sp
-                    )
-                }; Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(24.dp),
-                    contentAlignment = Alignment.CenterEnd
-                ) { Icon(Icons.Default.ArrowForward, null, tint = Zinc500) }
+                    }
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(24.dp),
+                        contentAlignment = Alignment.CenterStart
+                    ) {
+                        Text(
+                            text = Tr.get("my_space", lang),
+                            color = Color.White,
+                            fontSize = 32.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.sp,
+                            style = TextStyle(
+                                platformStyle = androidx.compose.ui.text.PlatformTextStyle(
+                                    includeFontPadding = false
+                                )
+                            )
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(24.dp),
+                        contentAlignment = Alignment.CenterEnd
+                    ) { Icon(Icons.Default.ArrowForward, null, tint = Zinc500) }
                 }
             }
         }
@@ -347,7 +378,7 @@ fun HomeScreen(navController: NavController, hwManager: HomeworkManager, lang: S
                             }
                         },
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF333333), // Темно-сірий колір
+                            containerColor = Zinc700,
                             contentColor = Color.White
                         ),
                         shape = RoundedCornerShape(12.dp),
