@@ -1,7 +1,8 @@
 # 📔 School Diary (Шкільний Щоденник)
 
 <p align="center">
-  <img src="photos/photo_1@28-01-2026_21-52-07_thumb.jpg" alt="Logo" width="120" height="120">
+  <img width="1100" height="614" alt="IMG_20260704_144153" src="https://github.com/user-attachments/assets/5bf88ce7-d32d-41f8-8efc-4cde8a40724e" />
+
 </p>
 
 An Android application designed to replace standard paper diaries with a dynamic, convenient, and smart mobile companion. Developed using Kotlin and powered by Gemini AI.
@@ -19,7 +20,7 @@ An Android application designed to replace standard paper diaries with a dynamic
 - **Flexible Scheduling / Гнучкий розклад:** Easily edit schedules, add custom dates, and record "other tasks" for any subject and day.
 - **Archive System / Архів завдань:** Keep track of completed homework and easily restore or copy items from the archive.
 - and etc.
-- <img width="1100" height="614" alt="IMG_20260704_144153" src="https://github.com/user-attachments/assets/8ff06859-0e3d-4285-ad96-042cb8440927" />
+
 
 ---
 
