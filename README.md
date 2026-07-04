@@ -21,6 +21,9 @@ An Android application designed to replace standard paper diaries with a dynamic
 - **Archive System / Архів завдань:** Keep track of completed homework and easily restore or copy items from the archive.
 - and etc.
 
+<img width="1304" height="2809" alt="Screenshot_2026-07-04-14-43-51-403_com bymrd1mm schooldiary-edit" src="https://github.com/user-attachments/assets/3abd97a1-258b-4ace-b0a0-6adb4d541b01" />
+<img width="1304" height="2809" alt="Screenshot_2026-07-04-14-42-28-112_com bymrd1mm schooldiary-edit" src="https://github.com/user-attachments/assets/83d9c308-ae9b-4c57-aca3-03151bded214" />
+<img width="1304" height="2809" alt="Screenshot_2026-07-04-14-44-11-884_com bymrd1mm schooldiary-edit" src="https://github.com/user-attachments/assets/ee974f9c-ad7e-4d3a-9ec9-deb4d396dc87" />
 
 ---
 
