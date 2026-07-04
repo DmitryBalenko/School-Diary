@@ -1,4 +1,4 @@
-# 📔 School Diary (Шкільний Щоденник)
+# 📔 School Diary
 
 <p align="center">
   <img width="1100" height="614" alt="IMG_20260704_144153" src="https://github.com/user-attachments/assets/5bf88ce7-d32d-41f8-8efc-4cde8a40724e" />
