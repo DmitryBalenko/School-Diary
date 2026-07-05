@@ -23,12 +23,11 @@ An Android application designed to replace standard paper diaries with a dynamic
 
 <table align="center">
   <tr>
-    <td valign="top"><img src="https://github.com/user-attachments/assets/25d20e43-ab70-4905-8c00-3d4f95aeca69" width="240" alt="Екран 1"></td>
+    <td valign="top"><img src="https://github.com/user-attachments/assets/5ceca43c-195d-4220-b534-b50c60b7a5e2" width="240" alt="Екран 1"></td>
     <td valign="top"><img src="https://github.com/user-attachments/assets/78595951-5b6e-4b9b-898f-10ecbf540133" width="240" alt="Екран 2"></td>
-    <td valign="top"><img src="https://github.com/user-attachments/assets/1784476b-27dc-4cfc-94f6-3c0a5e6132c6" width="240" alt="Екран 3"></td>
+    <td valign="top"><img src="https://github.com/user-attachments/assets/1dd39515-00f9-4535-9a77-0ccd1038d93c" width="240" alt="Екран 3"></td>
   </tr>
 </table>
-
 
 
 ---
