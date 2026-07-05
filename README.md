@@ -21,14 +21,11 @@ An Android application designed to replace standard paper diaries with a dynamic
 - **Archive System / Архів завдань:** Keep track of completed homework and easily restore or copy items from the archive.
 - and etc.
 
-<table align="center">
-  <tr>
-    <td valign="top"><img src="https://github.com/user-attachments/assets/5ceca43c-195d-4220-b534-b50c60b7a5e2" width="240" alt="Екран 1"></td>
-    <td valign="top"><img src="https://github.com/user-attachments/assets/78595951-5b6e-4b9b-898f-10ecbf540133" width="240" alt="Екран 2"></td>
-    <td valign="top"><img src="https://github.com/user-attachments/assets/1dd39515-00f9-4535-9a77-0ccd1038d93c" width="240" alt="Екран 3"></td>
-  </tr>
-</table>
-
+<div style="overflow-x: auto; white-space: nowrap; padding: 10px 0;">
+  <img src="https://github.com/user-attachments/assets/af4c176b-d20c-45e2-b22b-8d8fa83621a4" width="250" alt="Екран 1" style="display: inline-block; min-width: 250px; margin-right: 15px;">
+  <img src="https://github.com/user-attachments/assets/78595951-5b6e-4b9b-898f-10ecbf540133" width="250" alt="Екран 2" style="display: inline-block; min-width: 250px; margin-right: 15px;">
+  <img src="https://github.com/user-attachments/assets/1784476b-27dc-4cfc-94f6-3c0a5e6132c6" width="250" alt="Екран 3" style="display: inline-block; min-width: 250px;">
+</div>
 
 ---
 
