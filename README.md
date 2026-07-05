@@ -22,9 +22,9 @@ An Android application designed to replace standard paper diaries with a dynamic
 - and etc.
 
 <div style="overflow-x: auto; white-space: nowrap; padding: 10px 0;">
-  <img src="https://github.com/user-attachments/assets/af4c176b-d20c-45e2-b22b-8d8fa83621a4" width="250" alt="Екран 1" style="display: inline-block; min-width: 250px; margin-right: 15px;">
+  <img src="https://github.com/user-attachments/assets/ba8727ff-0534-4037-8f4d-07a0acb162c7" width="250" alt="Екран 1" style="display: inline-block; min-width: 250px; margin-right: 15px;">
   <img src="https://github.com/user-attachments/assets/78595951-5b6e-4b9b-898f-10ecbf540133" width="250" alt="Екран 2" style="display: inline-block; min-width: 250px; margin-right: 15px;">
-  <img src="https://github.com/user-attachments/assets/1784476b-27dc-4cfc-94f6-3c0a5e6132c6" width="250" alt="Екран 3" style="display: inline-block; min-width: 250px;">
+  <img src="https://github.com/user-attachments/assets/9eda30af-3060-4b96-a75b-c02021325f05" width="250" alt="Екран 3" style="display: inline-block; min-width: 250px;">
 </div>
 
 ---
